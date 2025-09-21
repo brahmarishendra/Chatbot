@@ -16,12 +16,23 @@ const __dirname = path.dirname(__filename);
 export async function processMessage(userMessage: string, threadId: string = "default") {
   try {
     // Always use Gemini API with auto-generated prompts - NO FALLBACK
-    console.log('Processing message with auto-generated Gemini prompt:', userMessage);
+    console.log('🔄 Processing message with Gemini API:', userMessage);
+    console.log('🔑 Using API Key:', process.env.GEMINI_API_KEY?.substring(0, 10) + '...');
     return await getGeminiResponse(userMessage, threadId);
   } catch (error) {
-    console.error('Gemini API failed:', error);
+    console.error('❌ Gemini API failed with error:', error);
+    
+    // Enhanced error logging for debugging
+    if (error instanceof Error) {
+      console.error('📋 Error details:', {
+        message: error.message,
+        stack: error.stack,
+        apiKey: process.env.GEMINI_API_KEY ? 'Present' : 'Missing'
+      });
+    }
+    
     // Return error message instead of fallback responses
-    throw new Error('I apologize, but I\'m having trouble connecting to my AI service right now. Please try again in a moment.');
+    throw new Error('🚫 API service temporarily unavailable. The AI is having technical difficulties - please try again in a moment.');
   }
 }
 
@@ -161,67 +172,91 @@ function generateAutoPrompt(userMessage: string, threadId: string = "default"): 
 // Function to get response from Gemini API with auto-generated prompts
 async function getGeminiResponse(userMessage: string, threadId: string): Promise<string> {
   try {
-    console.log('Making request to Gemini API...');
-    console.log('Auto-generating prompt for:', userMessage);
+    console.log('🚀 Making request to Gemini API...');
+    console.log('🧠 Auto-generating prompt for:', userMessage);
     
     // Auto-generate the perfect prompt for this message
     const autoPrompt = generateAutoPrompt(userMessage, threadId);
-    console.log('Generated prompt:', autoPrompt);
+    console.log('✨ Generated prompt:', autoPrompt.substring(0, 100) + '...');
     
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    console.log('🌐 API URL configured');
+    
+    const requestBody = {
+      contents: [{
+        parts: [{
+          text: autoPrompt
+        }]
+      }],
+      generationConfig: {
+        temperature: 0.8, // Natural responses with good creativity
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1000
+      },
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        }
+      ]
+    };
+    
+    console.log('📦 Sending request to Gemini API...');
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: autoPrompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.9, // High creativity for human-like responses
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1000
-        },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_HATE_SPEECH",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
-      })
+      body: JSON.stringify(requestBody)
     });
 
-    console.log('API Response Status:', response.status);
+    console.log('📊 API Response Status:', response.status);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('API Error Response:', errorText);
-      throw new Error(`Gemini API error: ${response.status} ${response.statusText} - ${errorText}`);
+      console.error('❌ API Error Response:', errorText);
+      
+      // Parse error for better debugging
+      try {
+        const errorJson = JSON.parse(errorText);
+        console.error('📋 Parsed API Error:', {
+          code: errorJson.error?.code,
+          message: errorJson.error?.message,
+          status: errorJson.error?.status
+        });
+        
+        // Handle quota exhaustion specifically
+        if (errorJson.error?.code === 429) {
+          throw new Error(`🚫 API quota exhausted. ${errorJson.error.message}`);
+        }
+      } catch (parseError) {
+        console.error('⚠️ Could not parse error response');
+      }
+      
+      throw new Error(`😱 Gemini API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('API Success - received data');
+    console.log('✅ API Success - received data structure:', Object.keys(data));
     
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!content) {
-      console.error('No content in API response:', data);
-      throw new Error('No content received from Gemini API');
+      console.error('❌ No content in API response:', data);
+      throw new Error('💭 No content received from Gemini API');
     }
 
     // Track response to avoid repetition
@@ -232,10 +267,11 @@ async function getGeminiResponse(userMessage: string, threadId: string): Promise
       memory.lastResponses = memory.lastResponses.slice(-3); // Keep last 3 responses
     }
 
-    console.log('Returning auto-generated response from Gemini');
+    console.log('✨ Returning auto-generated response from Gemini API');
+    console.log('💬 Response preview:', content.substring(0, 50) + '...');
     return content.trim();
   } catch (error) {
-    console.error('Gemini API Error Details:', error);
+    console.error('🔴 Gemini API Error Details:', error);
     throw error;
   }
 }
@@ -298,21 +334,25 @@ app.get('/render-health', (req, res) => {
 
 // Socket.IO connection handling
 io.on('connection', async (socket) => {
-  console.log('User connected:', socket.id);
+  console.log('👤 User connected:', socket.id);
   
-  // Generate a dynamic welcome message using Gemini API
+  // Generate a dynamic welcome message using Gemini API - NO HARDCODED MESSAGES
   try {
-    const welcomeMessage = await getGeminiResponse('Generate a warm, friendly welcome message for a new user connecting to a mental health support chatbot. Make it inviting and ask how they\'re doing or what\'s on their mind. Keep it under 50 words.', socket.id);
+    console.log('🚀 Generating welcome message via Gemini API...');
+    const welcomePrompt = 'You are a caring mental health support friend. Generate a warm, brief welcome message for someone who just connected. Ask how they\'re feeling or what\'s on their mind. Stay under 30 words. Be natural and supportive.';
+    const welcomeMessage = await getGeminiResponse(welcomePrompt, socket.id);
+    
+    console.log('✨ Welcome message generated by API:', welcomeMessage.substring(0, 50) + '...');
     
     socket.emit('bot-message', {
       message: welcomeMessage,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    // Only if Gemini fails, use a simple fallback
-    console.error('Failed to generate welcome message:', error);
+    console.error('❌ Failed to generate welcome message:', error);
+    // Only use fallback if API completely fails
     socket.emit('bot-message', {
-      message: "Hey! I'm here to listen and support you. How are you doing today?",
+      message: "🤖 Connection established but AI is initializing. How are you feeling today?",
       timestamp: new Date().toISOString()
     });
   }

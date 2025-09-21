@@ -184,11 +184,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setCurrentSession(finalSession);
     } catch (error) {
-      console.error('Error in sendMessage:', error);
-      // Show connection error - no fallback AI responses
+      console.error('❌ ChatContext: Error in sendMessage:', error);
+      
+      // Enhanced error logging
+      if (error instanceof Error) {
+        console.error('📋 Error details:', {
+          message: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      // Show specific error instead of generic message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "I'm having trouble connecting to my AI service right now. Please check your connection and try again.",
+        content: `🚫 ${errorMessage}`,
         sender: 'bot',
         timestamp: new Date(),
         language: selectedLanguage

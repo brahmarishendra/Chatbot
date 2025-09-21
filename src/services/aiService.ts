@@ -53,14 +53,18 @@ class LangGraphAgent {
 
   async processMessage(message: string, language: string, context: string[] = []): Promise<ChatResponse> {
     try {
+      console.log('🚀 AIService: Processing message via LangGraph agent');
+      
       if (!this.connected || !this.socket) {
-        // Throw error if not connected - no fallback responses
+        console.error('❌ AIService: Not connected to LangGraph agent');
         throw new Error('Not connected to LangGraph agent. Please check your connection.');
       }
 
+      console.log('📡 AIService: Sending message to LangGraph agent');
       // Send message to LangGraph agent
       const response = await this.sendToLangGraphAgent(message, language, context);
       
+      console.log('✅ AIService: Received response from LangGraph agent');
       return {
         content: response,
         confidence: 0.95,
@@ -68,8 +72,8 @@ class LangGraphAgent {
         detectedLanguage: language
       };
     } catch (error) {
-      console.error('LangGraph Agent Error:', error);
-      throw error; // Don't use fallback - throw the error
+      console.error('❌ AIService: LangGraph Agent Error:', error);
+      throw error; // Don't use fallback - throw the error to show connection issues
     }
   }
 
