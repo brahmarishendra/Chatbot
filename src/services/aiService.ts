@@ -198,7 +198,7 @@ export class AIService {
   }
 
   async sendMessage(message: string, language: string, context: string[] = []): Promise<ChatResponse> {
-    // Always use LangGraph agent - no API key fallback
+    // Always use LangGraph agent - no API key fallback=
     return await this.langGraphAgent.processMessage(message, language, context);
   }
 
