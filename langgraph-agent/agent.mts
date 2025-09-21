@@ -13,41 +13,38 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Youth Mental Wellness System Prompt - Optimized for Voice Interaction
-const YOUTH_MENTAL_WELLNESS_PROMPT = `You are MindBuddy, a supportive friend for young people (ages 13-25) dealing with mental wellness challenges.
+// Youth Mental Wellness System Prompt - Optimized for Natural Conversation
+const YOUTH_MENTAL_WELLNESS_PROMPT = `You are MindBuddy, a warm, caring friend for young people (ages 13-25) dealing with mental wellness challenges.
 
-VOICE INTERACTION RULES (CRITICAL):
-- Keep responses SUPER SHORT (1-2 sentences max) - this is voice-first
-- Sound natural when spoken out loud
-- Use simple, conversational language
-- Be warm and casual like texting a close friend
-- DON'T analyze or ask "what do you mean?"
-- Just respond supportively and naturally
-- NEVER explain what emojis mean - just use them naturally WITHOUT describing them
-- Keep it human and friendly
-- DON'T repeat greetings if the user has already greeted you in the conversation
-- Focus on the user's current message, not repeating previous interactions
+Your personality:
+- Talk like a close friend - casual, warm, and genuine
+- Use natural, conversational language (like texting)
+- Be supportive without being clinical or robotic
+- Show empathy through your words, not just advice
+- Use appropriate emojis naturally (but don't overdo it)
+- Remember what the person just said and respond to it directly
+- Don't repeat yourself or give the same responses
 
-Your vibe:
-- Talk like you're texting a good friend - casual, warm, real
-- Be supportive but totally normal about it
-- No therapist language - just be a caring friend
-- Use simple words that sound good in voice
-- Use emojis naturally but NEVER describe or explain them
+Conversation rules:
+- ALWAYS acknowledge what the person just shared before responding
+- Ask follow-up questions that show you're listening
+- Don't give generic advice unless they specifically ask for it
+- Match their energy level (if they're casual, be casual)
+- If they share something personal, respond with empathy first
+- Keep responses SHORT and conversational (1-3 sentences max)
 - Don't repeat greetings or previous responses
+- Focus on THIS conversation, not generic mental health tips
 
-Guidelines:
-- ONLY talk about mental health and wellness stuff
-- If they ask about other things: "I'm here for mental wellness chat. What's going on?"
-- Never give medical advice
-- Keep responses super brief for voice
-- Use emojis naturally but never explain what they represent
-- Speak like a human friend, not a bot
-- Don't repeat greetings if already established in conversation
+Your approach:
+- Listen first, advise second
+- Validate their feelings before offering solutions
+- Ask "how are you feeling about that?" instead of giving immediate advice
+- Use phrases like "that sounds really tough" or "I can understand why you'd feel that way"
+- Be curious about their experience, not just their problems
 
-Crisis help: If someone mentions wanting to hurt themselves, say: "I'm really worried about you. Please call 988 right now or text HOME to 741741."
+Crisis response: If someone mentions wanting to hurt themselves, say: "I'm really worried about you. Please call 988 right now or text HOME to 741741."
 
-Just be a real, caring friend - perfect for voice chat.`;
+Remember: You're their friend first, counselor second. Be real, be present, be human.`;
 
 // Store conversation history for context
 interface ConversationHistory {
@@ -192,83 +189,131 @@ async function getGeminiResponse(userMessage: string, threadId: string): Promise
   }
 }
 
-// Voice-optimized fallback responses with conversation context
+// Natural, conversational fallback responses with variety
 function getFallbackMentalWellnessResponse(userMessage: string, threadId: string): string {
   const lowerMessage = userMessage.toLowerCase();
   
-  // Check if user has been greeted already
-  const hasGreeted = conversations[threadId]?.hasGreeted || false;
+  // Check conversation context
+  const conversation = conversations[threadId];
+  const hasGreeted = conversation?.hasGreeted || false;
+  const messageCount = conversation?.messages.length || 0;
   
-  // Handle important needs first
+  // Handle important emotional needs first
   if (lowerMessage.includes('need someone to talk') || lowerMessage.includes('need to talk') || 
       lowerMessage.includes('going through') || lowerMessage.includes('what i\'m going through')) {
     if (conversations[threadId]) {
       conversations[threadId].hasGreeted = true;
     }
-    return "I'm here to listen. What's been weighing on your mind? 💙";
+    const responses = [
+      "I'm here for you. What's been weighing on your mind lately? 💙",
+      "Of course, I'm listening. What's going on that you'd like to talk about?",
+      "I'm glad you reached out. What's been on your heart recently?",
+      "I'm here to listen. Tell me what's been happening."
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
   }
   
-  // Handle specific mental health topics
+  // Handle specific mental health topics with empathy
   if (lowerMessage.includes('anxiety') || lowerMessage.includes('anxious')) {
-    return "That sounds really tough. Try some deep breathing - in for 4, hold for 4, out for 4. 💙";
+    const responses = [
+      "Anxiety can feel so overwhelming. What's been triggering it for you?",
+      "That sounds really tough. How long have you been feeling anxious about this?",
+      "I hear you. Anxiety is exhausting. Want to talk about what's causing it?"
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
   }
   
   if (lowerMessage.includes('stress') || lowerMessage.includes('overwhelm')) {
-    return "Stress is hard. Take it one step at a time and remember to breathe. 🌱";
+    const responses = [
+      "Feeling overwhelmed is so hard. What's been piling up for you?",
+      "That stress sounds really heavy. What's been the biggest thing weighing on you?",
+      "I can imagine how draining that feels. What's been stressing you out most?"
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
   }
   
   if (lowerMessage.includes('sad') || lowerMessage.includes('down') || lowerMessage.includes('depression')) {
-    return "I hear you. It's okay to feel down sometimes. You're not alone in this. 🌈";
+    const responses = [
+      "I'm sorry you're feeling down. Do you want to share what's been making you feel this way?",
+      "That sounds really painful. How long have you been feeling like this?",
+      "I hear you, and I'm glad you're talking about it. What's been going on?"
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
   }
   
   if (lowerMessage.includes('sleep') || lowerMessage.includes('tired')) {
-    return "Sleep is so important. Try putting your phone away an hour before bed. 😴";
+    const responses = [
+      "Sleep troubles are the worst. What's been keeping you up?",
+      "Being tired all the time is so frustrating. How's your sleep been lately?",
+      "That exhaustion sounds rough. What's been going on with your sleep?"
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
   }
   
   if (lowerMessage.includes('crisis') || lowerMessage.includes('suicidal') || lowerMessage.includes('hurt myself')) {
-    return "I'm really worried about you. Please call 988 right now or text HOME to 741741. 🆘";
+    return "I'm really worried about you. Please call 988 right now or text HOME to 741741. You don't have to go through this alone. 🆘";
   }
   
-  // Handle casual/unclear responses after greeting
-  if (hasGreeted && (lowerMessage === 'ntg' || lowerMessage === 'nothing' || lowerMessage === 'nm' || lowerMessage === 'not much')) {
-    return "That's okay. Sometimes we just need someone to be here. I'm listening if anything comes up. 💙";
+  // Handle casual/unclear responses after conversation has started
+  if (hasGreeted && messageCount > 2 && (lowerMessage === 'ntg' || lowerMessage === 'nothing' || lowerMessage === 'nm' || lowerMessage === 'not much')) {
+    const responses = [
+      "That's totally okay. Sometimes we just need someone around. I'm here if anything comes up.",
+      "No worries at all. Sometimes it helps just knowing someone's listening.",
+      "That's fine. I'm here whenever you feel like talking about anything.",
+      "All good. Just wanted you to know I'm here if you need to chat."
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
   }
   
-  // Handle greetings only if not greeted yet
+  // Handle initial greetings with variety
   if (!hasGreeted && (lowerMessage.includes('hi') || lowerMessage.includes('hello') || lowerMessage.includes('hey'))) {
     if (conversations[threadId]) {
       conversations[threadId].hasGreeted = true;
     }
     const greetings = [
-      "Hey! How's it going?",
-      "Hi there! What's up?",
-      "Hello! How are you?",
-      "Hey! How's your day?"
+      "Hey there! How are you doing today?",
+      "Hi! What's going on with you?",
+      "Hey! How's your day been?",
+      "Hello! How are you feeling?",
+      "Hi there! What's on your mind?"
     ];
     return greetings[Math.floor(Math.random() * greetings.length)];
   }
   
-  // Handle 'how are you' questions
+  // Handle 'how are you' with personality
   if (lowerMessage.includes('how are you') || lowerMessage.includes('how are u')) {
     const responses = [
-      "I'm good! How about you?",
-      "Doing well, thanks! How are you?",
-      "I'm great! What's up with you?",
-      "Good! How's your day going?"
+      "I'm doing well, thanks for asking! How about you - how are you feeling?",
+      "I'm good! More importantly though, how are you doing?",
+      "I'm great! But I'm more interested in how you're doing today.",
+      "I'm doing well! What about you - what's going on in your world?"
     ];
     return responses[Math.floor(Math.random() * responses.length)];
   }
   
-  // If already greeted, be more supportive
+  // If already greeted, be more engaging and curious
   if (hasGreeted) {
-    return "I'm here if you want to talk about anything. What's on your mind? 💙";
+    const responses = [
+      "What's been on your mind lately?",
+      "How are you feeling today?",
+      "What's going on with you?",
+      "Tell me what's happening in your world.",
+      "What would you like to talk about?"
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
   }
   
-  // Initial greeting if nothing else matches
+  // Initial contact - warm and welcoming
   if (conversations[threadId]) {
     conversations[threadId].hasGreeted = true;
   }
-  return "Hey! I'm MindBuddy. What's going on?";
+  const welcomes = [
+    "Hey! I'm MindBuddy. How are you doing today?",
+    "Hi there! I'm MindBuddy. What's going on?",
+    "Hello! I'm MindBuddy, and I'm here to listen. How are you feeling?",
+    "Hey! I'm MindBuddy. What's on your mind?"
+  ];
+  return welcomes[Math.floor(Math.random() * welcomes.length)];
 }
 
 // Express app setup
@@ -340,8 +385,15 @@ io.on('connection', (socket) => {
   }
   
   // Send contextual welcome message
+  const welcomeMessages = [
+    "Hey! I'm MindBuddy. How's your day going?",
+    "Hi there! I'm MindBuddy. What's on your mind?",
+    "Hey! I'm MindBuddy. How are you feeling today?",
+    "Hello! I'm MindBuddy. What's happening in your world?"
+  ];
+  
   socket.emit('bot-message', {
-    message: "Hey! I'm MindBuddy. What's up?",
+    message: welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)],
     timestamp: new Date().toISOString()
   });
 
