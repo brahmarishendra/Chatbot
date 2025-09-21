@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "postbuild": "cd langgraph-agent && npm install",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "cd langgraph-agent && npm start"

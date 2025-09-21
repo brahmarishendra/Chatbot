@@ -8,7 +8,6 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -196,27 +195,8 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the built frontend (if it exists)
-const frontendPath = path.join(__dirname, '../dist');
-console.log('Looking for frontend files at:', frontendPath);
-try {
-  if (fs.existsSync(frontendPath)) {
-    app.use(express.static(frontendPath));
-    console.log('✅ Serving frontend static files');
-  } else {
-    console.log('⚠️  Frontend dist folder not found, serving API only');
-  }
-} catch (error) {
-  console.log('⚠️  Could not set up static file serving:', error instanceof Error ? error.message : String(error));
-}
-
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
-});
-
-// API status endpoint
-app.get('/api/status', (req, res) => {
+app.get('/', (req, res) => {
   res.json({ 
     status: 'MindBuddy Agent Server is running!', 
     message: 'Youth Mental Wellness Support API',
@@ -225,25 +205,9 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Serve the React app for all other routes (if frontend exists)
-app.get('*', (req, res) => {
-  const indexPath = path.join(__dirname, '../dist/index.html');
-  try {
-    if (fs.existsSync(indexPath)) {
-      res.sendFile(indexPath);
-    } else {
-      res.json({ 
-        message: 'MindBuddy API Server',
-        status: 'Frontend not available - API only mode',
-        endpoints: {
-          health: '/api/health',
-          status: '/api/status'
-        }
-      });
-    }
-  } catch (error) {
-    res.status(500).json({ error: 'Server error', message: error instanceof Error ? error.message : String(error) });
-  }
+// API endpoint for testing
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
 // Socket.IO connection handling
@@ -312,20 +276,13 @@ try {
   process.exit(1);
 }
 
-// Handle uncaught exceptions with better logging
+// Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
-  console.error('Stack trace:', error.stack);
-  // Don't exit immediately in production - log and continue
-  if (process.env.NODE_ENV !== 'production') {
-    process.exit(1);
-  }
+  process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't exit immediately in production - log and continue
-  if (process.env.NODE_ENV !== 'production') {
-    process.exit(1);
-  }
+  process.exit(1);
 });
