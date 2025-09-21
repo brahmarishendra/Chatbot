@@ -1,4 +1,5 @@
 import { ApiSettings, ChatResponse } from '../types';
+import { ApiSettings, ChatResponse } from '../types';
 import { io, Socket } from 'socket.io-client';
 
 // LangGraph Agent Integration via WebSocket
@@ -53,18 +54,14 @@ class LangGraphAgent {
 
   async processMessage(message: string, language: string, context: string[] = []): Promise<ChatResponse> {
     try {
-      console.log('🚀 AIService: Processing message via LangGraph agent');
-      
       if (!this.connected || !this.socket) {
-        console.error('❌ AIService: Not connected to LangGraph agent');
-        throw new Error('Not connected to LangGraph agent. Please check your connection.');
+        // Fallback to simulated response if not connected
+        return this.getFallbackResponse(message, language);
       }
 
-      console.log('📡 AIService: Sending message to LangGraph agent');
       // Send message to LangGraph agent
       const response = await this.sendToLangGraphAgent(message, language, context);
       
-      console.log('✅ AIService: Received response from LangGraph agent');
       return {
         content: response,
         confidence: 0.95,
@@ -72,8 +69,8 @@ class LangGraphAgent {
         detectedLanguage: language
       };
     } catch (error) {
-      console.error('❌ AIService: LangGraph Agent Error:', error);
-      throw error; // Don't use fallback - throw the error to show connection issues
+      console.error('LangGraph Agent Error:', error);
+      return this.getFallbackResponse(message, language);
     }
   }
 
@@ -96,20 +93,10 @@ class LangGraphAgent {
         resolve(response);
       });
 
-      // Send clean message without context pollution
-      // Only add meaningful context, not error messages
-      const cleanContext = context.filter(ctx => 
-        !ctx.includes('🚫') && 
-        !ctx.includes('technical difficulties') && 
-        !ctx.includes('API service') &&
-        ctx.trim().length > 0
-      );
-      
-      const contextualMessage = cleanContext.length > 0 
-        ? `${cleanContext.slice(-2).join(' ')} ${message}`.trim()
+      // Send message with context
+      const contextualMessage = context.length > 0 
+        ? `Context: ${context.slice(-3).join(' ')}\n\nUser: ${message}` 
         : message;
-
-      console.log('📡 Sending clean message:', contextualMessage.substring(0, 100) + '...');
 
       this.socket.emit('user-message', {
         message: contextualMessage,
@@ -117,6 +104,23 @@ class LangGraphAgent {
         threadId: 'chat-session-' + Date.now()
       });
     });
+  }
+
+  private getFallbackResponse(message: string, language: string): ChatResponse {
+    const responses = {
+      en: "I hear what you're saying. I'm having some connection issues, but I'm here to listen. If you're in crisis, please reach out to someone - call 988 or text HOME to 741741. What's going on?",
+      hi: "मैं आपकी बात सुन रहा हूं। अभी मुझे कुछ कनेक्शन की समस्या है, पर मैं सुनने के लिए यहां हूं। आप कैसा महसूस कर रहे हैं?",
+      ta: "நீங்கள் சொல்வதை நான் கேட்கிறேன். இப்போ எனக்கு சில இணைப்பு சிக்கல்கள் இருக்கிறது, ஆனால் நான் கேட்க இங்கே இருக்கிறேன். நீங்கள் எப்படி இருக்கிறீங்கள்?",
+      te: "మీరు చెప్పేది నేను వింటున్నాను. ఇప్పుడు నాకు కొన్ని కనెక్షన్ సమస్యలు ఉన్నాయి, కాని నేను వినడానికి ఇక్కడ ఉన్నాను. మీరు ఏమి అనుభవించుతున్నారు?",
+      mr: "तुम्ही काय सांगत आहात ते मी ऐकत आहे. आता मला काही कनेक्शनच्या समस्या आहेत, पण मी ऐकण्यासाठी इथे आहे. तुम्ही कसे अनुभवत आहात?"
+    };
+
+    return {
+      content: responses[language as keyof typeof responses] || responses.en,
+      confidence: 0.6,
+      needsHumanFallback: true,
+      detectedLanguage: language
+    };
   }
 
   // Check connection status
@@ -203,17 +207,61 @@ export class AIService {
     }
     
     return {
-      apiKey: '', // Not used - always use Gemini via LangGraph
-      apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent', // Gemini endpoint
-      model: 'gemini-1.5-flash-latest',
+      apiKey: '', // Now empty so users must add their own API key
+      apiEndpoint: 'https://api.openai.com/v1/chat/completions',
+      model: 'gpt-3.5-turbo',
       maxTokens: 1000,
-      temperature: 0.8 // Set to 0.8 for natural responses as specified
+      temperature: 0.7
     };
   }
 
   async sendMessage(message: string, language: string, context: string[] = []): Promise<ChatResponse> {
-    // Always use LangGraph agent - no API key fallback=
-    return await this.langGraphAgent.processMessage(message, language, context);
+    if (!this.settings.apiKey || this.settings.apiKey === '') {
+      // Use LangGraph agent when no API key is configured
+      return await this.langGraphAgent.processMessage(message, language, context);
+    }
+
+    try {
+      // Use configured API key
+      const systemPrompt = this.buildSystemPrompt(language);
+      const contextMessages = context.map(msg => ({ role: 'assistant', content: msg }));
+      
+      const response = await fetch(this.settings.apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.settings.apiKey}`
+        },
+        body: JSON.stringify({
+          model: this.settings.model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...contextMessages,
+            { role: 'user', content: message }
+          ],
+          max_tokens: this.settings.maxTokens,
+          temperature: this.settings.temperature
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content || 'Sorry, I could not process your request.';
+      
+      return {
+        content,
+        confidence: 0.9,
+        needsHumanFallback: false,
+        detectedLanguage: language
+      };
+    } catch (error) {
+      console.error('AI Service Error:', error);
+      // Fallback to LangGraph agent
+      return await this.langGraphAgent.processMessage(message, language, context);
+    }
   }
 
   private buildSystemPrompt(language: string): string {
@@ -232,12 +280,11 @@ export class AIService {
     Your vibe:
     - Talk like you're texting a close friend - casual, real, warm
     - Use natural language, not clinical terms
-    - Keep it short and conversational (under 50 words usually)
+    - Keep it short and conversational
     - Show you care without being preachy
     - Use emojis naturally when it feels right
     - Don't repeat greetings if already said hi
     - Listen more than you talk
-    - Vary your responses - don't be repetitive
     
     What you do:
     - Actually listen to what they're sharing
@@ -251,7 +298,6 @@ export class AIService {
     - Don't analyze or ask "what do you mean?"
     - Don't give medical advice
     - Don't be overly formal or professional
-    - Don't give long responses
     
     Just be genuine, caring, and human. Like how you'd actually text a friend who needed support.`;
   }

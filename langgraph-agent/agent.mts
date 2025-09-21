@@ -1,6 +1,6 @@
-// Load environment variables from .env file
-import dotenv from 'dotenv';
-dotenv.config();
+// IMPORTANT - Add your API keys here. Be careful not to publish them.
+process.env.GEMINI_API_KEY = "AIzaSyDEPWWTnNkcpoyUZt83TKhiALrEusOPKWE";
+process.env.TAVILY_API_KEY = "tvly-...";
 
 import express from 'express';
 import { createServer } from 'http';
@@ -20,12 +20,6 @@ export async function processMessage(userMessage: string, threadId: string = "de
     return await getGeminiResponse(userMessage, threadId);
   } catch (error) {
     console.error('Gemini API failed, using fallback:', error);
-    
-    // Check for specific quota error
-    if (error instanceof Error && error.message.includes('quota')) {
-      return 'Sorry, our AI service has reached its daily limit. Please try again later or contact support for assistance.';
-    }
-    
     return getFallbackMentalWellnessResponse(userMessage);
   }
 }
@@ -94,7 +88,7 @@ async function getGeminiResponse(userMessage: string, threadId: string): Promise
           }]
         }],
         generationConfig: {
-          temperature: 0.8, // Natural responses with good creativity
+          temperature: 0.9, // High creativity for human-like responses
           topK: 40,
           topP: 0.95,
           maxOutputTokens: 1000
@@ -125,17 +119,6 @@ async function getGeminiResponse(userMessage: string, threadId: string): Promise
     if (!response.ok) {
       const errorText = await response.text();
       console.error('API Error Response:', errorText);
-      
-      // Parse error for better handling
-      try {
-        const errorJson = JSON.parse(errorText);
-        if (errorJson.error?.code === 429) {
-          throw new Error(`API quota exceeded - please upgrade your Gemini API plan or wait for quota reset`);
-        }
-      } catch (parseError) {
-        console.error('Could not parse error response');
-      }
-      
       throw new Error(`Gemini API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
