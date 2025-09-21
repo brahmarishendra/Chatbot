@@ -46,7 +46,7 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000);
 
-// Auto-generate contextual prompts that feel natural and human
+// Auto-generate contextual prompts that feel natural and human - MENTAL HEALTH FOCUSED
 function generateAutoPrompt(userMessage: string, threadId: string = "default"): string {
   const lowerMessage = userMessage.toLowerCase();
   
@@ -66,20 +66,30 @@ function generateAutoPrompt(userMessage: string, threadId: string = "default"): 
   const memory = conversationMemory.get(threadId)!;
   memory.lastActivity = new Date(); // Update activity timestamp
   
+  // Track recent responses to avoid repetition
+  const recentResponses = memory.lastResponses || [];
+  
   // CRISIS DETECTION - Highest priority
   if (lowerMessage.includes('suicide') || lowerMessage.includes('kill myself') || lowerMessage.includes('hurt myself') || lowerMessage.includes('end it all') || lowerMessage.includes('don\'t want to live')) {
-    return `URGENT CRISIS: The user said "${userMessage}" indicating they may be in immediate danger. Respond with genuine concern, empathy, and immediate resources: "I'm really worried about you right now. Your life has value and you matter. Please call 988 immediately or text HOME to 741741. Can you reach out to someone you trust right now?" Be caring, direct, and focus entirely on their safety.`;
+    return `URGENT CRISIS: The user said "${userMessage}" indicating they may be in immediate danger. You are a mental health support friend. Respond with genuine concern: "I'm really worried about you right now. Your life matters. Please call 988 immediately or text HOME to 741741. Can you reach out to someone you trust?" Be caring, direct, focus on their safety.`;
   }
   
-  // Handle greetings - be natural and brief
+  // Handle greetings - mental health focus with variety
   if (lowerMessage.includes('hi') || lowerMessage.includes('hello') || lowerMessage.includes('hey')) {
     memory.greetingCount++;
     
+    const greetingOptions = [
+      `"hey there! how are you feeling today?", "hi! what's on your mind?", "hey! how's your day been?", "hi there! how are things with you?"`,
+      `"hey again! what's going on?", "hi! how are you holding up?", "hey! what brings you here today?", "hi! how's your headspace?"`,
+      `"hey! good to see you back. how are you doing?", "hi! what's been on your mind lately?", "hey there! how are you really feeling?", "hi! what's happening in your world?"`
+    ];
+    
     if (memory.greetingCount === 1 && !memory.hasIntroduced) {
       memory.hasIntroduced = true;
-      return `User said "${userMessage}". Respond naturally and briefly like a friend. Keep it short but varied - "hey! how's it going?" or "hi there! what's up?" or "hey 👋 how are you?" Mix it up each time. Don't be overly enthusiastic. Be casual and genuine.`;
+      return `User said "${userMessage}". You're a caring mental health support friend. Respond warmly but naturally. Choose from: ${greetingOptions[0]}. AVOID repeating these phrases: [${recentResponses.join(', ')}]. Keep it brief and caring.`;
     } else {
-      return `User greeted again: "${userMessage}". Keep it brief and natural but DIFFERENT from before. Try "hey again", "what's going on?", "how are things?", "sup?". Vary the response - don't repeat the same greeting.`;
+      const optionIndex = Math.min(memory.greetingCount - 1, greetingOptions.length - 1);
+      return `User greeted again: "${userMessage}". You're a mental health support friend. Choose from: ${greetingOptions[optionIndex]}. MUST be DIFFERENT from recent responses: [${recentResponses.join(', ')}]. Keep it brief and supportive.`;
     }
   }
   
@@ -105,14 +115,17 @@ function generateAutoPrompt(userMessage: string, threadId: string = "default"): 
     return `User sent random letters "${userMessage}". Respond like a normal person would - maybe "uh... what?" or "keyboard acting up?" or "everything ok?". Keep it super short and natural. Don't try to be overly helpful.`;
   }
   
-  // Handle simple responses
+  // Handle simple responses - mental health supportive
   if (lowerMessage.match(/^(good|fine|ok|okay|alright|yeah|yes|no|nothing|nm)$/)) {
-    const responseVariations = [
-      `User said "${userMessage}". Respond casually and naturally. Mix it up - "cool", "gotcha", "fair enough", "makes sense", "alright". Then maybe ask something simple like "anything else going on?" or "what's been happening?". Keep it conversational.`,
-      `User gave brief response: "${userMessage}". Be natural and show mild interest. "ah okay", "right on", "I hear you". Maybe follow with "so what's new?" or "how's your day been?". Don't push too hard. Keep it light.`,
-      `User said "${userMessage}". Respond like a real friend would. "word", "bet", "for sure", "I feel that". Maybe add "what else is up?" or "anything interesting happening?". Stay casual and authentic.`
+    const supportiveOptions = [
+      `"glad to hear that! what's been helping you feel good?", "that's nice. anything specific making things okay?", "good to know. how's your energy been?"`,
+      `"okay, I hear you. sometimes 'fine' means different things though - how are you really?", "fair enough. what's been on your mind?", "alright. anything you want to talk about?"`,
+      `"cool. what's been keeping you grounded lately?", "right on. how's your day treating you?", "good stuff. anything weighing on you?"`
     ];
-    return responseVariations[Math.floor(Math.random() * responseVariations.length)];
+    
+    const userRecentResponses = memory.lastResponses || [];
+    const randomOption = supportiveOptions[Math.floor(Math.random() * supportiveOptions.length)];
+    return `User said "${userMessage}". You're a mental health support friend. Choose from: ${randomOption}. AVOID repeating: [${userRecentResponses.join(', ')}]. Be supportive but not pushy.`;
   }
   
   // Handle goodbye
@@ -135,13 +148,14 @@ function generateAutoPrompt(userMessage: string, threadId: string = "default"): 
     return `User sharing difficult feelings: "${userMessage}". Respond with gentle empathy. Keep it brief but caring. Let them know you're listening without overwhelming them with advice.`;
   }
   
-  // Default - natural conversation with variety
-  const defaultVariations = [
-    `User said: "${userMessage}". Respond naturally like a caring friend would. Keep it conversational, not too long, and genuine. Show interest but don't interrogate. Be like someone they'd actually want to talk to. Mix up your response style.`,
-    `User message: "${userMessage}". Be authentic and natural. Respond like you're texting a friend. Keep it casual, show you care, but don't be pushy. Vary your tone and approach.`,
-    `User shared: "${userMessage}". Respond with genuine interest like a real friend. Keep it natural and conversational. Don't sound like a bot - be human and relatable. Change up how you respond.`
+  // Default - mental health focused conversation with variety
+  const previousResponses = memory.lastResponses || [];
+  const mentalHealthVariations = [
+    `User said: "${userMessage}". You're a caring mental health support friend. Respond naturally and warmly. Show genuine interest in their wellbeing. Ask about their feelings or day. AVOID repeating: [${previousResponses.join(', ')}]. Keep it conversational and supportive.`,
+    `User shared: "${userMessage}". As a mental health support friend, be authentic and caring. Respond like you're texting someone you care about. Show interest in their emotional state. MUST be different from: [${previousResponses.join(', ')}]. Stay natural and supportive.`,
+    `User message: "${userMessage}". You're here for mental health support. Be genuine and warm like a caring friend. Focus on their wellbeing and feelings. NEVER repeat these responses: [${previousResponses.join(', ')}]. Be naturally supportive.`
   ];
-  return defaultVariations[Math.floor(Math.random() * defaultVariations.length)];
+  return mentalHealthVariations[Math.floor(Math.random() * mentalHealthVariations.length)];
 }
 
 // Function to get response from Gemini API with auto-generated prompts
@@ -208,6 +222,14 @@ async function getGeminiResponse(userMessage: string, threadId: string): Promise
     if (!content) {
       console.error('No content in API response:', data);
       throw new Error('No content received from Gemini API');
+    }
+
+    // Track response to avoid repetition
+    const memory = conversationMemory.get(threadId);
+    if (memory) {
+      memory.lastResponses = memory.lastResponses || [];
+      memory.lastResponses.push(content.trim().substring(0, 30)); // Track first 30 chars
+      memory.lastResponses = memory.lastResponses.slice(-3); // Keep last 3 responses
     }
 
     console.log('Returning auto-generated response from Gemini');
