@@ -49,15 +49,58 @@ Crisis help: If someone mentions wanting to hurt themselves, say: "I'm really wo
 
 Just be a real, caring friend - perfect for voice chat.`;
 
+// Store conversation history for context
+interface ConversationHistory {
+  [threadId: string]: {
+    messages: Array<{role: 'user' | 'assistant', content: string, timestamp: string}>;
+    hasGreeted: boolean;
+  };
+}
+
+const conversations: ConversationHistory = {};
+
 // Function to process user messages with mental wellness context using Gemini API
 export async function processMessage(userMessage: string, threadId: string = "default") {
   try {
+    // Initialize conversation if it doesn't exist
+    if (!conversations[threadId]) {
+      conversations[threadId] = {
+        messages: [],
+        hasGreeted: false
+      };
+    }
+
+    // Add user message to history
+    conversations[threadId].messages.push({
+      role: 'user',
+      content: userMessage,
+      timestamp: new Date().toISOString()
+    });
+
     // Always try Gemini API first (since we have a valid key)
     console.log('Processing message with Gemini API:', userMessage);
-    return await getGeminiResponse(userMessage, threadId);
+    const response = await getGeminiResponse(userMessage, threadId);
+    
+    // Add bot response to history
+    conversations[threadId].messages.push({
+      role: 'assistant',
+      content: response,
+      timestamp: new Date().toISOString()
+    });
+    
+    return response;
   } catch (error) {
     console.error('Gemini API failed, using fallback:', error);
-    return getFallbackMentalWellnessResponse(userMessage);
+    const fallbackResponse = getFallbackMentalWellnessResponse(userMessage, threadId);
+    
+    // Add fallback response to history
+    conversations[threadId].messages.push({
+      role: 'assistant',
+      content: fallbackResponse,
+      timestamp: new Date().toISOString()
+    });
+    
+    return fallbackResponse;
   }
 }
 
@@ -67,6 +110,24 @@ async function getGeminiResponse(userMessage: string, threadId: string): Promise
     console.log('Making request to Gemini API...');
     console.log('API Key (first 10 chars):', process.env.GEMINI_API_KEY?.substring(0, 10));
     
+    // Build conversation context for Gemini
+    let conversationContext = YOUTH_MENTAL_WELLNESS_PROMPT;
+    
+    // Add recent conversation history for context (last 6 messages)
+    if (conversations[threadId] && conversations[threadId].messages.length > 0) {
+      const recentMessages = conversations[threadId].messages.slice(-6);
+      conversationContext += "\n\nRecent conversation context:";
+      recentMessages.forEach(msg => {
+        if (msg.role === 'user') {
+          conversationContext += `\nUser: ${msg.content}`;
+        } else {
+          conversationContext += `\nMindBuddy: ${msg.content}`;
+        }
+      });
+    }
+    
+    conversationContext += `\n\nUser: ${userMessage}`;
+    
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
@@ -75,7 +136,7 @@ async function getGeminiResponse(userMessage: string, threadId: string): Promise
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `${YOUTH_MENTAL_WELLNESS_PROMPT}\n\nUser: ${userMessage}`
+            text: conversationContext
           }]
         }],
         generationConfig: {
@@ -131,33 +192,23 @@ async function getGeminiResponse(userMessage: string, threadId: string): Promise
   }
 }
 
-// Voice-optimized fallback responses
-function getFallbackMentalWellnessResponse(userMessage: string): string {
+// Voice-optimized fallback responses with conversation context
+function getFallbackMentalWellnessResponse(userMessage: string, threadId: string): string {
   const lowerMessage = userMessage.toLowerCase();
   
-  // Handle greetings
-  if (lowerMessage.includes('hi') || lowerMessage.includes('hello') || lowerMessage.includes('hey')) {
-    const greetings = [
-      "Hey! How's it going?",
-      "Hi there! What's up?",
-      "Hello! How are you?",
-      "Hey! How's your day?"
-    ];
-    return greetings[Math.floor(Math.random() * greetings.length)];
+  // Check if user has been greeted already
+  const hasGreeted = conversations[threadId]?.hasGreeted || false;
+  
+  // Handle important needs first
+  if (lowerMessage.includes('need someone to talk') || lowerMessage.includes('need to talk') || 
+      lowerMessage.includes('going through') || lowerMessage.includes('what i\'m going through')) {
+    if (conversations[threadId]) {
+      conversations[threadId].hasGreeted = true;
+    }
+    return "I'm here to listen. What's been weighing on your mind? 💙";
   }
   
-  // Handle 'how are you' questions
-  if (lowerMessage.includes('how are you') || lowerMessage.includes('how are u')) {
-    const responses = [
-      "I'm good! How about you?",
-      "Doing well, thanks! How are you?",
-      "I'm great! What's up with you?",
-      "Good! How's your day going?"
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
-  }
-  
-  // Voice-friendly short responses
+  // Handle specific mental health topics
   if (lowerMessage.includes('anxiety') || lowerMessage.includes('anxious')) {
     return "That sounds really tough. Try some deep breathing - in for 4, hold for 4, out for 4. 💙";
   }
@@ -178,7 +229,45 @@ function getFallbackMentalWellnessResponse(userMessage: string): string {
     return "I'm really worried about you. Please call 988 right now or text HOME to 741741. 🆘";
   }
   
-  // General supportive response
+  // Handle casual/unclear responses after greeting
+  if (hasGreeted && (lowerMessage === 'ntg' || lowerMessage === 'nothing' || lowerMessage === 'nm' || lowerMessage === 'not much')) {
+    return "That's okay. Sometimes we just need someone to be here. I'm listening if anything comes up. 💙";
+  }
+  
+  // Handle greetings only if not greeted yet
+  if (!hasGreeted && (lowerMessage.includes('hi') || lowerMessage.includes('hello') || lowerMessage.includes('hey'))) {
+    if (conversations[threadId]) {
+      conversations[threadId].hasGreeted = true;
+    }
+    const greetings = [
+      "Hey! How's it going?",
+      "Hi there! What's up?",
+      "Hello! How are you?",
+      "Hey! How's your day?"
+    ];
+    return greetings[Math.floor(Math.random() * greetings.length)];
+  }
+  
+  // Handle 'how are you' questions
+  if (lowerMessage.includes('how are you') || lowerMessage.includes('how are u')) {
+    const responses = [
+      "I'm good! How about you?",
+      "Doing well, thanks! How are you?",
+      "I'm great! What's up with you?",
+      "Good! How's your day going?"
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
+  }
+  
+  // If already greeted, be more supportive
+  if (hasGreeted) {
+    return "I'm here if you want to talk about anything. What's on your mind? 💙";
+  }
+  
+  // Initial greeting if nothing else matches
+  if (conversations[threadId]) {
+    conversations[threadId].hasGreeted = true;
+  }
   return "Hey! I'm MindBuddy. What's going on?";
 }
 
@@ -242,7 +331,15 @@ app.get('/render-health', (req, res) => {
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   
-  // Send welcome message
+  // Initialize conversation for this socket
+  if (!conversations[socket.id]) {
+    conversations[socket.id] = {
+      messages: [],
+      hasGreeted: false
+    };
+  }
+  
+  // Send contextual welcome message
   socket.emit('bot-message', {
     message: "Hey! I'm MindBuddy. What's up?",
     timestamp: new Date().toISOString()
@@ -270,6 +367,10 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
+    // Clean up old conversations (keep for 1 hour after disconnect)
+    setTimeout(() => {
+      delete conversations[socket.id];
+    }, 3600000); // 1 hour
   });
 });
 
