@@ -245,11 +245,44 @@ io.on('connection', (socket) => {
   });
 });
 
+// Validate environment variables
+function validateEnvironment() {
+  const requiredEnvVars = ['GEMINI_API_KEY'];
+  const missing = requiredEnvVars.filter(envVar => !process.env[envVar]);
+  
+  if (missing.length > 0) {
+    console.warn(`⚠️  Missing environment variables: ${missing.join(', ')}`);
+    console.warn('⚠️  App will use fallback responses only');
+  } else {
+    console.log('✅ All required environment variables are set');
+  }
+}
+
 // Start server
 const PORT = process.env.PORT || 3003;
-server.listen(PORT, () => {
-  console.log(`🤖 MindBuddy Mental Wellness Chatbot running on http://localhost:${PORT}`);
-  console.log('💙 Ready to provide youth mental health support!');
-  console.log('✨ Now powered by Google Gemini API for dynamic responses!');
-  console.log(`🔑 API Key configured: ${process.env.GEMINI_API_KEY ? 'Yes' : 'No'}`);
+
+try {
+  validateEnvironment();
+  
+  server.listen(PORT, () => {
+    console.log(`🤖 MindBuddy Mental Wellness Chatbot running on port ${PORT}`);
+    console.log('💙 Ready to provide youth mental health support!');
+    console.log('✨ Now powered by Google Gemini API for dynamic responses!');
+    console.log(`🔑 Gemini API Key configured: ${process.env.GEMINI_API_KEY ? 'Yes' : 'No'}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+} catch (error) {
+  console.error('❌ Failed to start server:', error);
+  process.exit(1);
+}
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
