@@ -1,5 +1,5 @@
 // IMPORTANT - Add your API keys here. Be careful not to publish them.
-process.env.GEMINI_API_KEY = "AIzaSyDEPWWTnNkcpoyUZt83TKhiALrEusOPKWE"; // Updated API key
+process.env.GEMINI_API_KEY = "AIzaSyBoLxBNGhNX4wvnsGKKtYPhhj0VpZwpQNc"; // Updated API key
 process.env.TAVILY_API_KEY = "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";
 
 import express from 'express';
