@@ -85,37 +85,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [sessions]);
 
   const createNewSession = () => {
-    // More natural, varied welcome messages that don't sound robotic
-    const welcomeMessages = [
-      "Hey! I'm glad you're here. What's going on in your world today?",
-      "Hi there! Thanks for stopping by. How are you actually doing?",
-      "Hey! Nice to connect with you. What's been on your mind lately?",
-      "Hi! I'm here to listen, whether you're having a rough day or just want to chat. What's up?",
-      "Hey there! Good to see you. How has your day been treating you?",
-      "Hi! I'm really glad you reached out. What brings you here today?",
-      "Hey! Thanks for being here. I'm curious - how are you feeling right now?",
-      "Hi there! I'm here for whatever you want to talk about. How are things going for you?"
-    ];
-    
-    // Pick a random message but ensure it's not the same as recent sessions
-    let selectedMessage;
-    do {
-      selectedMessage = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
-    } while (sessions.length > 0 && 
-             sessions[0].messages.length > 0 && 
-             sessions[0].messages[0].content === selectedMessage &&
-             welcomeMessages.length > 1);
-    
     const newSession: ChatSession = {
       id: Date.now().toString(),
       title: 'New conversation',
-      messages: [{
-        id: 'welcome-' + Date.now(),
-        content: selectedMessage,
-        sender: 'bot',
-        timestamp: new Date(),
-        language: selectedLanguage
-      }],
+      messages: [], // No initial welcome message - will come from Gemini
       createdAt: new Date(),
       lastActive: new Date()
     };
@@ -212,10 +185,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentSession(finalSession);
     } catch (error) {
       console.error('Error in sendMessage:', error);
-      // Enhanced fallback response for mental wellness
+      // Show connection error - no fallback AI responses
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: getMentalWellnessFallbackMessage(content, selectedLanguage),
+        content: "I'm having trouble connecting to my AI service right now. Please check your connection and try again.",
         sender: 'bot',
         timestamp: new Date(),
         language: selectedLanguage
@@ -263,19 +236,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const titles = ['Just chatting', 'Random thoughts', 'Open conversation', 'Casual talk', 'Daily chat'];
       return titles[Math.floor(Math.random() * titles.length)];
     }
-  };
-
-  // Enhanced fallback message for mental wellness context
-  const getMentalWellnessFallbackMessage = (userMessage: string, language: string): string => {
-    const fallbackMessages = {
-      en: `I hear what you're saying. I'm having some connection issues right now, but I want you to know that I'm here and your feelings matter. If you're in crisis, please reach out to someone - call 988 or text HOME to 741741. What's going on?`,
-      hi: `मैं आपकी बात सुन रहा हूं। अभी मुझे कुछ तकनीकी समस्या है, लेकिन आपकी भावनाएं महत्वपूर्ण हैं। यदि आप संकट में हैं, तो किसी से बात करें।`,
-      ta: `நீங்கள் சொல்வதை நான் கேட்கிறேன். இப்போ எனக்கு சில தொழில்நுட்ப சிக்கல்கள் இருந்தாலும், உங்கள் உணர்வுகள் முக்கியம் என்பதை அறிந்து கொள்ளுங்கள். நெருக்கடியில் இருந்தால், மனநல நிபுணரை தொடர்பு கொள்ளுங்கள்।`,
-      te: `మీరు చెప్పేది నేను వింటున్నాను. ఇప్పుడు నాకు కొన్ని సాంకేతిక సమస్యలు ఉన్నప్పటికీ, మీ భావనలు ముఖ్యమని తెలుసుకోండి. సంక్షోభంలో ఉంటే, మానసిక ఆరోగ్య నిపుణుడిని సంప్రదించండి।`,
-      mr: `तुम्ही काय सांगत आहात ते मी ऐकत आहे. आता मला काही तांत्रिक अडचणी आहेत, पण तुमच्या भावना महत्वाच्या आहेत हे जाणून घ्या. संकटात असाल तर मानसिक आरोग्य तज्ञाशी संपर्क साधा.`
-    };
-
-    return fallbackMessages[language as keyof typeof fallbackMessages] || fallbackMessages.en;
   };
 
   return (

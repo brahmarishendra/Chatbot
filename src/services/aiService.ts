@@ -54,8 +54,8 @@ class LangGraphAgent {
   async processMessage(message: string, language: string, context: string[] = []): Promise<ChatResponse> {
     try {
       if (!this.connected || !this.socket) {
-        // Fallback to simulated response if not connected
-        return this.getFallbackResponse(message, language);
+        // Throw error if not connected - no fallback responses
+        throw new Error('Not connected to LangGraph agent. Please check your connection.');
       }
 
       // Send message to LangGraph agent
@@ -69,7 +69,7 @@ class LangGraphAgent {
       };
     } catch (error) {
       console.error('LangGraph Agent Error:', error);
-      return this.getFallbackResponse(message, language);
+      throw error; // Don't use fallback - throw the error
     }
   }
 
@@ -103,31 +103,6 @@ class LangGraphAgent {
         threadId: 'chat-session-' + Date.now()
       });
     });
-  }
-
-  private getFallbackResponse(message: string, language: string): ChatResponse {
-    const responses = {
-      en: [
-        "I'm having some connection issues right now, but I'm here to listen. What's really going on with you?",
-        ],
-    };
-
-    const langResponses = responses[language as keyof typeof responses] || responses.en;
-    const selectedResponse = langResponses[Math.floor(Math.random() * langResponses.length)];
-    
-    // Add crisis resources if needed
-    const finalResponse = message.toLowerCase().includes('crisis') || 
-                          message.toLowerCase().includes('suicide') || 
-                          message.toLowerCase().includes('hurt') ?
-      selectedResponse + " If you're in crisis, please call 988 or text HOME to 741741." :
-      selectedResponse;
-
-    return {
-      content: finalResponse,
-      confidence: 0.6,
-      needsHumanFallback: true,
-      detectedLanguage: language
-    };
   }
 
   // Check connection status
@@ -223,52 +198,8 @@ export class AIService {
   }
 
   async sendMessage(message: string, language: string, context: string[] = []): Promise<ChatResponse> {
-    if (!this.settings.apiKey || this.settings.apiKey === '') {
-      // Use LangGraph agent when no API key is configured
-      return await this.langGraphAgent.processMessage(message, language, context);
-    }
-
-    try {
-      // Use configured API key
-      const systemPrompt = this.buildSystemPrompt(language);
-      const contextMessages = context.map(msg => ({ role: 'assistant', content: msg }));
-      
-      const response = await fetch(this.settings.apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.settings.apiKey}`
-        },
-        body: JSON.stringify({
-          model: this.settings.model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...contextMessages,
-            { role: 'user', content: message }
-          ],
-          max_tokens: this.settings.maxTokens,
-          temperature: this.settings.temperature
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      const content = data.choices[0]?.message?.content || 'Sorry, I could not process your request.';
-      
-      return {
-        content,
-        confidence: 0.9,
-        needsHumanFallback: false,
-        detectedLanguage: language
-      };
-    } catch (error) {
-      console.error('AI Service Error:', error);
-      // Fallback to LangGraph agent
-      return await this.langGraphAgent.processMessage(message, language, context);
-    }
+    // Always use LangGraph agent - no API key fallback
+    return await this.langGraphAgent.processMessage(message, language, context);
   }
 
   private buildSystemPrompt(language: string): string {

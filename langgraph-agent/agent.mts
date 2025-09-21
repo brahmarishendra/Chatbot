@@ -1,5 +1,5 @@
 // IMPORTANT - Add your API keys here. Be careful not to publish them.
-process.env.GEMINI_API_KEY = "AIzaSyDEPWWTnNkcpoyUZt83TKhiALrEusOPKWE";
+process.env.GEMINI_API_KEY = "AIzaSyDEPWWTnNkcpoyUZt83TKhiALrEusOPKWE"; // Updated API key
 process.env.TAVILY_API_KEY = "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";
 
 import express from 'express';
@@ -15,12 +15,13 @@ const __dirname = path.dirname(__filename);
 // Function to process user messages with auto-generated prompts using Gemini API
 export async function processMessage(userMessage: string, threadId: string = "default") {
   try {
-    // Always use Gemini API with auto-generated prompts
+    // Always use Gemini API with auto-generated prompts - NO FALLBACK
     console.log('Processing message with auto-generated Gemini prompt:', userMessage);
     return await getGeminiResponse(userMessage, threadId);
   } catch (error) {
-    console.error('Gemini API failed, using fallback:', error);
-    return getFallbackMentalWellnessResponse(userMessage, threadId);
+    console.error('Gemini API failed:', error);
+    // Return error message instead of fallback responses
+    throw new Error('I apologize, but I\'m having trouble connecting to my AI service right now. Please try again in a moment.');
   }
 }
 
@@ -70,101 +71,77 @@ function generateAutoPrompt(userMessage: string, threadId: string = "default"): 
     return `URGENT CRISIS: The user said "${userMessage}" indicating they may be in immediate danger. Respond with genuine concern, empathy, and immediate resources: "I'm really worried about you right now. Your life has value and you matter. Please call 988 immediately or text HOME to 741741. Can you reach out to someone you trust right now?" Be caring, direct, and focus entirely on their safety.`;
   }
   
-  // Handle greetings - vary based on conversation history
+  // Handle greetings - be natural and brief
   if (lowerMessage.includes('hi') || lowerMessage.includes('hello') || lowerMessage.includes('hey')) {
     memory.greetingCount++;
     
     if (memory.greetingCount === 1 && !memory.hasIntroduced) {
       memory.hasIntroduced = true;
-      return `First greeting from user: "${userMessage}". Respond warmly and naturally like meeting a new friend. Introduce yourself as a supportive friend, ask their name or how they're doing. Be genuine and conversational, not formal. Avoid generic responses.`;
-    } else if (memory.greetingCount > 3) {
-      return `User keeps saying hi/hello: "${userMessage}". They've greeted ${memory.greetingCount} times now. Respond with gentle curiosity about why they keep saying hi. Ask if they're not sure what to talk about or if something's on their mind. Be understanding and try to move the conversation forward.`;
+      return `User said "${userMessage}". Respond naturally and briefly like a friend. Keep it short but varied - "hey! how's it going?" or "hi there! what's up?" or "hey 👋 how are you?" Mix it up each time. Don't be overly enthusiastic. Be casual and genuine.`;
     } else {
-      return `User greeted again: "${userMessage}". They might be starting a new topic or checking back in. Since you've already greeted, acknowledge them warmly but try to understand what they actually want to talk about. Ask what's on their mind or how they're really doing.`;
+      return `User greeted again: "${userMessage}". Keep it brief and natural but DIFFERENT from before. Try "hey again", "what's going on?", "how are things?", "sup?". Vary the response - don't repeat the same greeting.`;
     }
   }
   
-  // Handle when someone shares their name
-  if (lowerMessage.includes('i am ') || lowerMessage.includes('im ') || lowerMessage.includes('my name is') || lowerMessage.match(/^[a-z]{2,15}$/)) {
-    const possibleName = userMessage.match(/(?:i am |im |my name is )([a-z]+)/i)?.[1] || (userMessage.match(/^[a-z]{2,15}$/i) ? userMessage : null);
-    if (possibleName) {
-      memory.hasIntroduced = true;
-      return `User shared their name: "${userMessage}" (likely ${possibleName}). Respond warmly using their name. Thank them for sharing and ask how they're doing or what brings them here today. Be friendly and make them feel welcome.`;
-    }
-  }
-  
-  // Handle random/testing input with more intelligence
-  if (lowerMessage.length < 4 || /^[a-z]+$/.test(lowerMessage) && !lowerMessage.match(/\b(sad|happy|good|bad|ok|fine|stress|anxiety|yes|no)\b/)) {
+  // Handle single letters or very short messages
+  if (lowerMessage.length === 1 || (lowerMessage.length < 4 && /^[a-z]+$/.test(lowerMessage))) {
     memory.randomTestCount++;
     
+    const shortMessageVariations = [
+      `User sent very short message "${userMessage}". Respond briefly and naturally. "${userMessage}?", "hm?", "what's that?", "not sure what you mean", "everything good?". Keep it SHORT - like how a real person would respond. Don't be overly helpful.`,
+      `User typed "${userMessage}". Be natural about it. "uh... what?", "${userMessage}??", "come again?", "you alright?". Keep response under 5 words. Be casual and real.`,
+      `Short message from user: "${userMessage}". Respond like a confused friend. "???", "what now?", "${userMessage}... okay?", "say what?". Be natural and brief.`
+    ];
+    
     if (memory.randomTestCount === 1) {
-      return `User sent random/testing text "${userMessage}". First time - respond with humor and personality. Acknowledge they might be testing the system, but still be supportive and try to encourage real conversation. Be playful but caring.`;
-    } else if (memory.randomTestCount > 2) {
-      return `User keeps sending random text "${userMessage}". They've done this ${memory.randomTestCount} times. Gently ask if they're having trouble figuring out what to say or if they want to actually talk about something. Be understanding - maybe they're nervous or don't know how to start.`;
+      return shortMessageVariations[0];
     } else {
-      return `User sent another random text "${userMessage}". Be patient but try to understand what they really want. Maybe ask if they're testing the system or if they want to talk about something specific but don't know how to start.`;
+      return shortMessageVariations[Math.floor(Math.random() * shortMessageVariations.length)];
     }
   }
   
-  // Handle simple positive responses
-  if (lowerMessage.match(/^(good|fine|ok|okay|alright)$/)) {
-    memory.conversationStage = 'engaged';
-    return `User gave a brief positive response: "${userMessage}". Don't just accept this surface answer. Ask follow-up questions to understand how they're REALLY doing. Something like "That's good to hear! What's been going well for you?" or "Glad things are okay - what's been on your mind lately?" Try to deepen the conversation.`;
+  // Handle longer random text
+  if (lowerMessage.length > 3 && /^[a-z]+$/.test(lowerMessage) && !lowerMessage.match(/\b(sad|happy|good|bad|ok|fine|stress|anxiety|yes|no|bye|hello|hi)\b/)) {
+    return `User sent random letters "${userMessage}". Respond like a normal person would - maybe "uh... what?" or "keyboard acting up?" or "everything ok?". Keep it super short and natural. Don't try to be overly helpful.`;
   }
   
-  // Mental health topics - adapt based on conversation stage
+  // Handle simple responses
+  if (lowerMessage.match(/^(good|fine|ok|okay|alright|yeah|yes|no|nothing|nm)$/)) {
+    const responseVariations = [
+      `User said "${userMessage}". Respond casually and naturally. Mix it up - "cool", "gotcha", "fair enough", "makes sense", "alright". Then maybe ask something simple like "anything else going on?" or "what's been happening?". Keep it conversational.`,
+      `User gave brief response: "${userMessage}". Be natural and show mild interest. "ah okay", "right on", "I hear you". Maybe follow with "so what's new?" or "how's your day been?". Don't push too hard. Keep it light.`,
+      `User said "${userMessage}". Respond like a real friend would. "word", "bet", "for sure", "I feel that". Maybe add "what else is up?" or "anything interesting happening?". Stay casual and authentic.`
+    ];
+    return responseVariations[Math.floor(Math.random() * responseVariations.length)];
+  }
+  
+  // Handle goodbye
+  if (lowerMessage.includes('bye') || lowerMessage.includes('later') || lowerMessage.includes('gotta go')) {
+    const byeVariations = [
+      `User is saying goodbye: "${userMessage}". Respond naturally and briefly like a friend. "see ya", "later", "take care", "catch you later", "peace". Keep it short and genuine.`,
+      `User saying bye: "${userMessage}". Be natural about it. "bye", "talk soon", "see you around", "later dude", "take it easy". Match their energy - casual and brief.`,
+      `User leaving: "${userMessage}". Respond like a real friend would. "alright, see ya", "later!", "bye for now", "catch you on the flip side". Keep it natural and not too formal.`
+    ];
+    return byeVariations[Math.floor(Math.random() * byeVariations.length)];
+  }
+  
+  // Mental health topics - be supportive but natural
   if (lowerMessage.includes('anxiety') || lowerMessage.includes('anxious') || lowerMessage.includes('stress') || lowerMessage.includes('overwhelm')) {
-    memory.lastTopics.push('anxiety/stress');
-    memory.conversationStage = 'engaged';
-    
-    if (memory.lastTopics.filter(t => t === 'anxiety/stress').length > 1) {
-      return `User mentioned anxiety/stress again: "${userMessage}". This seems to be an ongoing concern for them. Build on previous conversation, show you remember, and offer deeper support or practical suggestions. Be like a friend who's been listening to their struggles.`;
-    } else {
-      return `User sharing about anxiety/stress: "${userMessage}". Validate their feelings genuinely. Sound like a caring friend who really gets it. Ask follow-up questions that show you're listening and want to understand their specific situation.`;
-    }
+    return `User mentioned anxiety/stress: "${userMessage}". Respond with genuine care but keep it natural and not too long. Show you understand without being preachy. Ask one simple question to show you care.`;
   }
   
-  // Sadness/depression - deeper empathy
+  // Sadness/depression - gentle support
   if (lowerMessage.includes('sad') || lowerMessage.includes('down') || lowerMessage.includes('depression') || lowerMessage.includes('depressed')) {
-    memory.lastTopics.push('depression/sadness');
-    memory.conversationStage = 'deepening';
-    
-    return `User is sharing deep feelings: "${userMessage}". Respond with genuine empathy and warmth. Let them know they're not alone and that sharing takes courage. Be like a close friend who sits with them in their pain. Avoid toxic positivity - acknowledge their feelings are valid.`;
+    return `User sharing difficult feelings: "${userMessage}". Respond with gentle empathy. Keep it brief but caring. Let them know you're listening without overwhelming them with advice.`;
   }
   
-  // "Nothing much" responses - dig deeper gently
-  if (lowerMessage.includes('nothing') || lowerMessage.includes('ntg') || lowerMessage.includes('nm') || lowerMessage.includes('not much')) {
-    return `User says "${userMessage}" (nothing much happening). Read between the lines - they might have more to share but aren't sure how. Gently probe with curiosity and warmth. Be like a friend who can sense when something's actually up.`;
-  }
-  
-  // Questions about the AI - be human and redirect
-  if (lowerMessage.includes('how are you') || lowerMessage.includes('how r u')) {
-    return `User asked about you: "${userMessage}". Answer briefly and authentically as a supportive friend, then turn focus back to them. Show genuine interest in their wellbeing. Don't make it about you - be like a good friend who cares more about how they're doing.`;
-  }
-  
-  // School/work stress
-  if (lowerMessage.includes('school') || lowerMessage.includes('work') || lowerMessage.includes('college') || lowerMessage.includes('job')) {
-    memory.lastTopics.push('school/work');
-    return `User mentioned school/work stress: "${userMessage}". Relate to the pressure they're feeling. Ask about what's making it hardest right now. Be like a friend who's been through similar struggles and gets how overwhelming it can be.`;
-  }
-  
-  // Sleep issues
-  if (lowerMessage.includes('sleep') || lowerMessage.includes('tired') || lowerMessage.includes('insomnia') || lowerMessage.includes('can\'t sleep')) {
-    return `User has sleep concerns: "${userMessage}". Show you understand how frustrating sleep issues are. Ask gentle questions about what might be keeping them up. Be supportive and offer to listen about what's on their mind.`;
-  }
-  
-  // Update last responses to avoid repetition
-  memory.lastResponses.push(userMessage.slice(0, 20));
-  memory.lastResponses = memory.lastResponses.slice(-5); // Keep last 5
-  
-  // Default - adapt to conversation stage
-  if (memory.conversationStage === 'initial') {
-    return `Early conversation with user: "${userMessage}". Focus on making them feel comfortable and heard. Be warm and approachable like a new friend who genuinely wants to get to know them. Avoid repeating previous responses.`;
-  } else if (memory.conversationStage === 'engaged') {
-    return `Continuing conversation: "${userMessage}". Build on what they've shared before. Be like a friend who's been listening and cares about their ongoing situation. Show continuity and deeper interest.`;
-  } else {
-    return `Deep conversation: "${userMessage}". This person has opened up to you. Respond with the care and understanding of a close, trusted friend. Be present with them in whatever they're experiencing.`;
-  }
+  // Default - natural conversation with variety
+  const defaultVariations = [
+    `User said: "${userMessage}". Respond naturally like a caring friend would. Keep it conversational, not too long, and genuine. Show interest but don't interrogate. Be like someone they'd actually want to talk to. Mix up your response style.`,
+    `User message: "${userMessage}". Be authentic and natural. Respond like you're texting a friend. Keep it casual, show you care, but don't be pushy. Vary your tone and approach.`,
+    `User shared: "${userMessage}". Respond with genuine interest like a real friend. Keep it natural and conversational. Don't sound like a bot - be human and relatable. Change up how you respond.`
+  ];
+  return defaultVariations[Math.floor(Math.random() * defaultVariations.length)];
 }
 
 // Function to get response from Gemini API with auto-generated prompts
@@ -241,153 +218,6 @@ async function getGeminiResponse(userMessage: string, threadId: string): Promise
   }
 }
 
-// Human-like fallback responses with variety and personality
-function getFallbackMentalWellnessResponse(userMessage: string, threadId: string = "default"): string {
-  const lowerMessage = userMessage.toLowerCase();
-  
-  // Get conversation memory for context
-  const memory = conversationMemory.get(threadId);
-  const greetingCount = memory?.greetingCount || 0;
-  const randomTestCount = memory?.randomTestCount || 0;
-  const hasIntroduced = memory?.hasIntroduced || false;
-  
-  // Handle greetings with more intelligence based on count
-  if (lowerMessage.includes('hi') || lowerMessage.includes('hello') || lowerMessage.includes('hey')) {
-    if (greetingCount === 1 && !hasIntroduced) {
-      const introGreetings = [
-        "Hey there! I'm here to listen and support you. What's your name?",
-        "Hi! I'm glad you reached out. I'm here to chat about whatever's on your mind. How are you doing?",
-        "Hey! Thanks for stopping by. I'm here to listen - what's going on with you today?",
-        "Hi there! I'm here for you, whether you want to talk about something specific or just need someone to listen. How are you feeling?"
-      ];
-      return introGreetings[Math.floor(Math.random() * introGreetings.length)];
-    } else if (greetingCount > 3) {
-      const repeatedGreetingResponses = [
-        "I notice you keep saying hi! 😊 Are you not sure what to talk about? That's totally okay - sometimes it's hard to know where to start.",
-        "Hey again! It seems like you might be trying to figure out what to say. No pressure - we can talk about anything or nothing at all.",
-        "Hi! You've said hello a few times now - maybe you're feeling a bit unsure about what to share? I'm here for whatever you want to talk about."
-      ];
-      return repeatedGreetingResponses[Math.floor(Math.random() * repeatedGreetingResponses.length)];
-    } else {
-      const followUpGreetings = [
-        "Hey again! What's on your mind?",
-        "Hi! Good to see you back. How are you really doing?",
-        "Hey there! What would you like to talk about?",
-        "Hi! I'm here and listening. What's going on?"
-      ];
-      return followUpGreetings[Math.floor(Math.random() * followUpGreetings.length)];
-    }
-  }
-  
-  // Handle name introductions
-  if (lowerMessage.includes('i am ') || lowerMessage.includes('im ') || lowerMessage.includes('my name is')) {
-    const possibleName = userMessage.match(/(?:i am |im |my name is )([a-z]+)/i)?.[1];
-    if (possibleName) {
-      const nameResponses = [
-        `Nice to meet you, ${possibleName}! I'm really glad you're here. How has your day been treating you?`,
-        `Hey ${possibleName}! Thanks for sharing your name with me. I'm here to listen - what's been on your mind lately?`,
-        `${possibleName}, it's great to connect with you! How are you feeling today?`
-      ];
-      return nameResponses[Math.floor(Math.random() * nameResponses.length)];
-    }
-  }
-  
-  // Handle random text with escalating responses
-  if (lowerMessage.length < 4 || /^[a-z]+$/.test(lowerMessage) && !lowerMessage.match(/\b(sad|happy|good|bad|ok|fine|stress|anxiety|yes|no)\b/)) {
-    if (randomTestCount === 1) {
-      const firstRandomResponses = [
-        "Haha, testing things out? I get it! I'm here for real conversations when you're ready. What's actually going on?",
-        "Random typing? Been there! 😄 But seriously, I'm here to listen to whatever's on your mind.",
-        "I see you're just messing around a bit! That's totally fine. When you want to chat about something real, I'm all ears."
-      ];
-      return firstRandomResponses[Math.floor(Math.random() * firstRandomResponses.length)];
-    } else if (randomTestCount > 2) {
-      const persistentRandomResponses = [
-        "I notice you're sending a lot of random text. Are you maybe having trouble figuring out what to say? That's completely normal - sometimes it's hard to start.",
-        "It seems like you might be testing me or not sure how to begin. No judgment here! Sometimes people need time to warm up to talking.",
-        "Are you feeling a bit nervous or unsure about what to share? That's totally okay. We can start with something simple - how are you feeling right now?"
-      ];
-      return persistentRandomResponses[Math.floor(Math.random() * persistentRandomResponses.length)];
-    } else {
-      const casualResponses = [
-        "Testing, testing? 😊 I'm here for actual conversations about whatever you're dealing with.",
-        "Keyboard smashing? I feel that sometimes! What's really going on in your head right now?",
-        "Just playing around? Cool! But if something's actually bothering you, I'm here to listen."
-      ];
-      return casualResponses[Math.floor(Math.random() * casualResponses.length)];
-    }
-  }
-  
-  // Handle simple positive responses more intelligently
-  if (lowerMessage.match(/^(good|fine|ok|okay|alright)$/)) {
-    const deeperResponses = [
-      "That's good to hear! But I'm curious - what's actually been going well for you?",
-      "Glad things are okay! What's been on your mind lately though?",
-      "Nice! Sometimes 'good' can mean different things though. How are you really feeling?",
-      "That's great! What's been making things feel good for you?"
-    ];
-    return deeperResponses[Math.floor(Math.random() * deeperResponses.length)];
-  }
-  
-  // Handle 'how are you' questions with more personality
-  if (lowerMessage.includes('how are you') || lowerMessage.includes('how are u')) {
-    const responses = [
-      "I'm doing well, thanks for asking! More importantly though, how are YOU doing? What's going on with you?",
-      "I'm good! But I'm way more interested in hearing about you. How's life treating you today?",
-      "I'm solid, thanks! But enough about me - what's happening in your world? How are you feeling?",
-      "I'm alright! Really though, I want to know about you. What's been on your mind lately?"
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
-  }
-  
-  // Real, supportive responses for different feelings with more variety
-  if (lowerMessage.includes('anxiety') || lowerMessage.includes('anxious')) {
-    const anxietyResponses = [
-      "Ugh, anxiety is the worst. It can feel so overwhelming and exhausting. What's been triggering it for you lately?",
-      "That sounds really tough. Anxiety can make everything feel so much bigger and scarier. Want to talk about what's been setting it off?",
-      "I hear you. Anxiety can be absolutely draining. What's been making your mind race recently?"
-    ];
-    return anxietyResponses[Math.floor(Math.random() * anxietyResponses.length)];
-  }
-  
-  if (lowerMessage.includes('stress') || lowerMessage.includes('overwhelm')) {
-    const stressResponses = [
-      "Ugh, stress is just the absolute worst. It's like everything piles up at once. What's been the biggest thing weighing on you?",
-      "I totally get that. When stress hits, it feels like you're drowning in everything you have to do. What's been the hardest part?",
-      "That overwhelmed feeling is so brutal. Like there's just too much and not enough time. What's been piling up for you?"
-    ];
-    return stressResponses[Math.floor(Math.random() * stressResponses.length)];
-  }
-  
-  if (lowerMessage.includes('sad') || lowerMessage.includes('down') || lowerMessage.includes('depression')) {
-    const sadnessResponses = [
-      "I'm really glad you felt comfortable sharing that with me. Feeling down is so heavy and lonely. You don't have to carry this alone. What's been hurting the most?",
-      "That takes courage to share. Depression can make everything feel gray and hopeless. I'm here with you in this. Want to talk about what's been hardest?",
-      "Thank you for trusting me with this. Sadness can feel so isolating and deep. You matter, and your feelings are valid. What's been weighing on your heart?"
-    ];
-    return sadnessResponses[Math.floor(Math.random() * sadnessResponses.length)];
-  }
-  
-  // For unclear messages, be more engaging and varied
-  if (lowerMessage.includes('ntg') || lowerMessage.includes('nothing') || lowerMessage.includes('nm')) {
-    const nothingResponses = [
-      "Nothing much? I get that. Sometimes it's just one of those days where everything feels... meh. Anything lurking under the surface though?",
-      "Fair enough! Those quiet days can actually be nice sometimes. How's your headspace been though? Anything bouncing around in there?",
-      "I hear you. Sometimes 'nothing' days are actually the most peaceful. But how are you feeling underneath it all?"
-    ];
-    return nothingResponses[Math.floor(Math.random() * nothingResponses.length)];
-  }
-  
-  // General supportive response for unclear input - more varied and engaging
-  const generalResponses = [
-    "I'm here and listening. Sometimes it's hard to put feelings into words, but I'm here for whatever you're going through.",
-    "I can sense you might have something on your mind. Take your time - I'm here to listen to whatever you want to share.",
-    "Not sure what to say? That's totally okay. Sometimes feelings are complicated. How are you actually doing right now?",
-    "I'm here for whatever's going on with you. Whether it's big or small, I want to hear about it. What's on your mind?"
-  ];
-  return generalResponses[Math.floor(Math.random() * generalResponses.length)];
-}
-
 // Express app setup
 const app = express();
 const server = createServer(app);
@@ -445,24 +275,25 @@ app.get('/render-health', (req, res) => {
 });
 
 // Socket.IO connection handling
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
   console.log('User connected:', socket.id);
   
-  // Send a more natural welcome message
-  const welcomeStarters = [
-    "Hey! I'm here to listen and support you. What's your name?",
-    "Hi there! I'm glad you reached out. How are you doing today?",
-    "Hey! Thanks for stopping by. I'm here for whatever you want to talk about.",
-    "Hi! I'm here to listen - whether you're having a good day or a tough one. How are you feeling?"
-  ];
-  
-  const welcomeMessage = welcomeStarters[Math.floor(Math.random() * welcomeStarters.length)];
-  
-  // Send the welcome message immediately
-  socket.emit('bot-message', {
-    message: welcomeMessage,
-    timestamp: new Date().toISOString()
-  });
+  // Generate a dynamic welcome message using Gemini API
+  try {
+    const welcomeMessage = await getGeminiResponse('Generate a warm, friendly welcome message for a new user connecting to a mental health support chatbot. Make it inviting and ask how they\'re doing or what\'s on their mind. Keep it under 50 words.', socket.id);
+    
+    socket.emit('bot-message', {
+      message: welcomeMessage,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    // Only if Gemini fails, use a simple fallback
+    console.error('Failed to generate welcome message:', error);
+    socket.emit('bot-message', {
+      message: "Hey! I'm here to listen and support you. How are you doing today?",
+      timestamp: new Date().toISOString()
+    });
+  }
 
   socket.on('user-message', async (data) => {
     const { message, threadId } = data;
@@ -477,8 +308,9 @@ io.on('connection', (socket) => {
       });
     } catch (error) {
       console.error('Error processing message:', error);
+      const errorMessage = error instanceof Error ? error.message : "I'm having trouble connecting right now. Please try again in a moment.";
       socket.emit('bot-message', {
-        message: "I'm sorry, I'm experiencing some technical difficulties. Please try again, and remember that if you're in crisis, please contact a mental health professional immediately.",
+        message: errorMessage,
         timestamp: new Date().toISOString()
       });
     }
