@@ -8,6 +8,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -195,8 +196,19 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the built frontend
-app.use(express.static(path.join(__dirname, '../dist')));
+// Serve static files from the built frontend (if it exists)
+const frontendPath = path.join(__dirname, '../dist');
+console.log('Looking for frontend files at:', frontendPath);
+try {
+  if (fs.existsSync(frontendPath)) {
+    app.use(express.static(frontendPath));
+    console.log('✅ Serving frontend static files');
+  } else {
+    console.log('⚠️  Frontend dist folder not found, serving API only');
+  }
+} catch (error) {
+  console.log('⚠️  Could not set up static file serving:', error instanceof Error ? error.message : String(error));
+}
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -213,9 +225,25 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Serve the React app for all other routes
+// Serve the React app for all other routes (if frontend exists)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+  const indexPath = path.join(__dirname, '../dist/index.html');
+  try {
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.json({ 
+        message: 'MindBuddy API Server',
+        status: 'Frontend not available - API only mode',
+        endpoints: {
+          health: '/api/health',
+          status: '/api/status'
+        }
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Server error', message: error instanceof Error ? error.message : String(error) });
+  }
 });
 
 // Socket.IO connection handling
@@ -284,13 +312,20 @@ try {
   process.exit(1);
 }
 
-// Handle uncaught exceptions
+// Handle uncaught exceptions with better logging
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
-  process.exit(1);
+  console.error('Stack trace:', error.stack);
+  // Don't exit immediately in production - log and continue
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
+  // Don't exit immediately in production - log and continue
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
 });
