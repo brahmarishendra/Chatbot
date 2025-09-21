@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && cd langgraph-agent && npm install",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "cd langgraph-agent && npm start"

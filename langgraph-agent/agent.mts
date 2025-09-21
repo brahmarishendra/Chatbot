@@ -195,8 +195,16 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from the built frontend
+app.use(express.static(path.join(__dirname, '../dist')));
+
 // Health check endpoint
-app.get('/', (req, res) => {
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// API status endpoint
+app.get('/api/status', (req, res) => {
   res.json({ 
     status: 'MindBuddy Agent Server is running!', 
     message: 'Youth Mental Wellness Support API',
@@ -205,9 +213,9 @@ app.get('/', (req, res) => {
   });
 });
 
-// API endpoint for testing
-app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+// Serve the React app for all other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // Socket.IO connection handling
