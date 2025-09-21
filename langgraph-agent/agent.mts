@@ -305,9 +305,9 @@ try {
   });
   
   // Handle server errors
-  serverInstance.on('error', (error) => {
+  serverInstance.on('error', (error: any) => {
     console.error('❌ Server error:', error);
-    if (error.code === 'EADDRINUSE') {
+    if ('code' in error && error.code === 'EADDRINUSE') {
       console.error(`❌ Port ${PORT} is already in use`);
     }
     process.exit(1);
