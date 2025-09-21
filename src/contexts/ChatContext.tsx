@@ -85,12 +85,33 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [sessions]);
 
   const createNewSession = () => {
+    // More natural, varied welcome messages that don't sound robotic
+    const welcomeMessages = [
+      "Hey! I'm glad you're here. What's going on in your world today?",
+      "Hi there! Thanks for stopping by. How are you actually doing?",
+      "Hey! Nice to connect with you. What's been on your mind lately?",
+      "Hi! I'm here to listen, whether you're having a rough day or just want to chat. What's up?",
+      "Hey there! Good to see you. How has your day been treating you?",
+      "Hi! I'm really glad you reached out. What brings you here today?",
+      "Hey! Thanks for being here. I'm curious - how are you feeling right now?",
+      "Hi there! I'm here for whatever you want to talk about. How are things going for you?"
+    ];
+    
+    // Pick a random message but ensure it's not the same as recent sessions
+    let selectedMessage;
+    do {
+      selectedMessage = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+    } while (sessions.length > 0 && 
+             sessions[0].messages.length > 0 && 
+             sessions[0].messages[0].content === selectedMessage &&
+             welcomeMessages.length > 1);
+    
     const newSession: ChatSession = {
       id: Date.now().toString(),
-      title: 'Mental Wellness Chat',
+      title: 'New conversation',
       messages: [{
         id: 'welcome-' + Date.now(),
-        content: "Hi! I'm MindBuddy, your compassionate mental wellness companion. I'm here to support you with anxiety, stress, mood concerns, and other mental health challenges. How are you feeling today? 💙",
+        content: selectedMessage,
         sender: 'bot',
         timestamp: new Date(),
         language: selectedLanguage
@@ -216,30 +237,42 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Generate appropriate session title based on content
+  // Generate appropriate session title based on content with more variety
   const generateSessionTitle = (content: string): string => {
     const lowerContent = content.toLowerCase();
+    
     if (lowerContent.includes('anxiety') || lowerContent.includes('anxious')) {
-      return '💙 Anxiety Support';
+      const titles = ['Anxiety chat', 'Feeling anxious', 'Anxiety talk', 'Worried thoughts'];
+      return titles[Math.floor(Math.random() * titles.length)];
     } else if (lowerContent.includes('stress') || lowerContent.includes('overwhelm')) {
-      return '🌱 Stress Management';
+      const titles = ['Stress talk', 'Feeling overwhelmed', 'Too much stress', 'Pressure chat'];
+      return titles[Math.floor(Math.random() * titles.length)];
     } else if (lowerContent.includes('sad') || lowerContent.includes('down') || lowerContent.includes('depression')) {
-      return '🌈 Mood Support';
+      const titles = ['Feeling down', 'Sad thoughts', 'Hard day', 'Low mood chat'];
+      return titles[Math.floor(Math.random() * titles.length)];
     } else if (lowerContent.includes('sleep') || lowerContent.includes('tired')) {
-      return '😴 Sleep & Rest';
+      const titles = ['Sleep troubles', 'Tired thoughts', 'Rest issues', 'Sleep chat'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    } else if (lowerContent.includes('school') || lowerContent.includes('work')) {
+      const titles = ['School stress', 'Work troubles', 'Academic pressure', 'Job stuff'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    } else if (lowerContent.includes('hi') || lowerContent.includes('hello') || lowerContent.includes('hey')) {
+      const titles = ['Just saying hi', 'Casual chat', 'Checking in', 'Random talk'];
+      return titles[Math.floor(Math.random() * titles.length)];
     } else {
-      return '💜 Mental Wellness Chat';
+      const titles = ['Just chatting', 'Random thoughts', 'Open conversation', 'Casual talk', 'Daily chat'];
+      return titles[Math.floor(Math.random() * titles.length)];
     }
   };
 
   // Enhanced fallback message for mental wellness context
   const getMentalWellnessFallbackMessage = (userMessage: string, language: string): string => {
     const fallbackMessages = {
-      en: `I hear you sharing "${userMessage.slice(0, 50)}${userMessage.length > 50 ? '...' : ''}" with me. While I'm having some technical difficulties right now, I want you to know that your feelings are valid and you're not alone. If you're in crisis, please reach out to a mental health professional or crisis helpline immediately. How can I support you right now?`,
-      hi: `मैं समझ रहा हूं कि आप अपनी बात साझा कर रहे हैं। तकनीकी समस्या के बावजूद, मैं चाहता हूं कि आप जानें कि आपकी भावनाएं महत्वपूर्ण हैं। यदि आप संकट में हैं, तो कृपया मानसिक स्वास्थ्य पेशेवर से संपर्क करें।`,
-      ta: `நீங்கள் பகிர்ந்து கொள்வதை நான் கேட்கிறேன். தொழில்நுட்ப சிக்கல்கள் இருந்தாலும், உங்கள் உணர்வுகள் முக்கியம் என்பதை அறிந்து கொள்ளுங்கள். நெருக்கடியில் இருந்தால், மனநல நிபுணரை தொடர்பு கொள்ளுங்கள்।`,
-      te: `మీరు పంచుకుంటున్నది నేను వింటున్నాను. సాంకేతిక సమస్యలు ఉన్నప్పటికీ, మీ భావనలు ముఖ్యమని తెలుసుకోండి. సంక్షోభంలో ఉంటే, మానసిక ఆరోగ్య నిపుణుడిని సంప్రదించండి।`,
-      mr: `तुम्ही काय सांगत आहात ते मी ऐकत आहे. तांत्रिक अडचणी असूनही, तुमच्या भावना महत्वाच्या आहेत हे जाणून घ्या. संकटात असाल तर मानसिक आरोग्य तज्ञाशी संपर्क साधा.`
+      en: `I hear what you're saying. I'm having some connection issues right now, but I want you to know that I'm here and your feelings matter. If you're in crisis, please reach out to someone - call 988 or text HOME to 741741. What's going on?`,
+      hi: `मैं आपकी बात सुन रहा हूं। अभी मुझे कुछ तकनीकी समस्या है, लेकिन आपकी भावनाएं महत्वपूर्ण हैं। यदि आप संकट में हैं, तो किसी से बात करें।`,
+      ta: `நீங்கள் சொல்வதை நான் கேட்கிறேன். இப்போ எனக்கு சில தொழில்நுட்ப சிக்கல்கள் இருந்தாலும், உங்கள் உணர்வுகள் முக்கியம் என்பதை அறிந்து கொள்ளுங்கள். நெருக்கடியில் இருந்தால், மனநல நிபுணரை தொடர்பு கொள்ளுங்கள்।`,
+      te: `మీరు చెప్పేది నేను వింటున్నాను. ఇప్పుడు నాకు కొన్ని సాంకేతిక సమస్యలు ఉన్నప్పటికీ, మీ భావనలు ముఖ్యమని తెలుసుకోండి. సంక్షోభంలో ఉంటే, మానసిక ఆరోగ్య నిపుణుడిని సంప్రదించండి।`,
+      mr: `तुम्ही काय सांगत आहात ते मी ऐकत आहे. आता मला काही तांत्रिक अडचणी आहेत, पण तुमच्या भावना महत्वाच्या आहेत हे जाणून घ्या. संकटात असाल तर मानसिक आरोग्य तज्ञाशी संपर्क साधा.`
     };
 
     return fallbackMessages[language as keyof typeof fallbackMessages] || fallbackMessages.en;

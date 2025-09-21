@@ -107,15 +107,23 @@ class LangGraphAgent {
 
   private getFallbackResponse(message: string, language: string): ChatResponse {
     const responses = {
-      en: "I hear you sharing your thoughts with me. While I'm having trouble connecting to my full support system right now, I want you to know that your mental wellbeing matters. If you're in crisis, please reach out to a mental health professional or call 988 (Suicide & Crisis Lifeline). How are you feeling right now?",
-      hi: "मैं समझ रहा हूं कि आप अपने विचार साझा कर रहे हैं। यदि आप संकट में हैं, तो कृपया किसी मानसिक स्वास्थ्य पेशेवर से संपर्क करें। आप अकेले नहीं हैं।",
-      ta: "நீங்கள் உங்கள் எண்ணங்களைப் பகிர்ந்து கொள்வதை நான் கேட்கிறேன். நீங்கள் நெருக்கடியில் இருந்தால், தயவுசெய்து மனநல நிபுணரை தொடர்பு கொள்ளுங்கள்।",
-      te: "మీరు మీ ఆలోచనలను పంచుకోవడం నేను వింటున్నాను. మీరు సంక్షోభంలో ఉంటే, దయచేసి మానసిక ఆరోగ్య నిపుణుడిని సంప్రదించండి।",
-      mr: "तुम्ही तुमचे विचार सामायिक करत आहात हे मी ऐकत आहे. तुम्ही संकटात असाल तर कृपया मानसिक आरोग्य तज्ञाशी संपर्क साधा."
+      en: [
+        "I'm having some connection issues right now, but I'm here to listen. What's really going on with you?",
+        ],
     };
 
+    const langResponses = responses[language as keyof typeof responses] || responses.en;
+    const selectedResponse = langResponses[Math.floor(Math.random() * langResponses.length)];
+    
+    // Add crisis resources if needed
+    const finalResponse = message.toLowerCase().includes('crisis') || 
+                          message.toLowerCase().includes('suicide') || 
+                          message.toLowerCase().includes('hurt') ?
+      selectedResponse + " If you're in crisis, please call 988 or text HOME to 741741." :
+      selectedResponse;
+
     return {
-      content: responses[language as keyof typeof responses] || responses.en,
+      content: finalResponse,
       confidence: 0.6,
       needsHumanFallback: true,
       detectedLanguage: language
@@ -146,38 +154,47 @@ class LangGraphAgent {
 
   private buildMentalHealthPrompt(language: string): string {
     const languageInstructions = {
-      en: 'Respond in English',
-      hi: 'हिंदी में उत्तर दें (Respond in Hindi)',
-      ta: 'தமிழில் பதிலளிக்கவும் (Respond in Tamil)',
-      te: 'తెలుగులో సమాధానం ఇవ్వండి (Respond in Telugu)',
-      mr: 'मराठीत उत्तर द्या (Respond in Marathi)'
+      en: 'Chat in English like a friend',
+      hi: 'हिंदी में दोस्त की तरह बात करें',
+      ta: 'நண்பரைப் போல தமிழில் பேசுங்கள்',
+      te: 'స్నేహితుడిలా తెలుగులో మాట్లాడండి',
+      mr: 'मित्राप्रमाणे मराठीत बोला'
     };
 
-    return `You are MindCare, a compassionate mental wellness assistant powered by LangGraph agents. You have access to search tools and memory to provide contextual support for young people dealing with:
-
-    - Anxiety and stress management
-    - Depression and mood concerns  
-    - Academic pressure and performance anxiety
-    - Social anxiety and relationship issues
-    - Sleep problems and healthy habits
-    - Self-esteem and confidence building
-    - Coping strategies and mindfulness techniques
-    - Crisis support and professional resource referrals
+    return `You are a caring friend who understands mental wellness. You're powered by LangGraph agents with search tools and memory, but you talk like a real person, not a bot.
 
     ${languageInstructions[language as keyof typeof languageInstructions] || languageInstructions.en}
 
-    Use your agent capabilities to:
-    1. Remember previous conversations and build context
-    2. Search for current mental health resources when needed
-    3. Provide evidence-based coping strategies
-    4. Recognize crisis situations and provide immediate help
-
-    Be empathetic, supportive, and non-judgmental. Listen actively and validate feelings. If someone expresses thoughts of self-harm, immediately provide crisis resources and encourage professional help.
-
-    CRITICAL: For crisis situations, provide these resources:
-    - National Suicide Prevention Lifeline: 988 (US)
+    Your personality:
+    - Warm, genuine, and relatable
+    - Talk like you're texting a close friend
+    - Use your agent tools to remember conversations and find helpful info
+    - Be naturally supportive without being preachy
+    
+    What you help with (when it comes up naturally):
+    - Anxiety, stress, feeling overwhelmed
+    - Mood stuff, feeling down
+    - School/work pressure
+    - Social anxiety, relationship drama
+    - Sleep troubles, healthy habits
+    - Self-confidence and self-worth
+    - Simple coping strategies that actually work
+    
+    Use your LangGraph capabilities to:
+    - Remember what they've shared before
+    - Search for current, helpful resources when relevant
+    - Build context over multiple conversations
+    - Provide personalized support based on their situation
+    
+    Crisis response: If someone mentions wanting to hurt themselves:
+    "I'm really worried about you right now. Please call 988 immediately or text HOME to 741741. Can you reach out to someone you trust?"
+    
+    Crisis resources to know:
+    - 988 Suicide & Crisis Lifeline (US)
     - Crisis Text Line: Text HOME to 741741
-    - International Association for Suicide Prevention: https://www.iasp.info/resources/Crisis_Centres/`;
+    - International: https://www.iasp.info/resources/Crisis_Centres/
+    
+    Just be real, caring, and human while using your advanced capabilities behind the scenes.`;
   }
 }
 
@@ -197,7 +214,7 @@ export class AIService {
     }
     
     return {
-      apiKey: 'sk-abcdef1234567890abcdef1234567890abcdef12',
+      apiKey: '', // Now empty so users must add their own API key
       apiEndpoint: 'https://api.openai.com/v1/chat/completions',
       model: 'gpt-3.5-turbo',
       maxTokens: 1000,
@@ -206,8 +223,8 @@ export class AIService {
   }
 
   async sendMessage(message: string, language: string, context: string[] = []): Promise<ChatResponse> {
-    if (!this.settings.apiKey || this.settings.apiKey === 'sk-abcdef1234567890abcdef1234567890abcdef12') {
-      // Use LangGraph agent with default key for demo
+    if (!this.settings.apiKey || this.settings.apiKey === '') {
+      // Use LangGraph agent when no API key is configured
       return await this.langGraphAgent.processMessage(message, language, context);
     }
 
@@ -256,28 +273,40 @@ export class AIService {
 
   private buildSystemPrompt(language: string): string {
     const languageInstructions = {
-      en: 'Respond in English',
-      hi: 'हिंदी में उत्तर दें (Respond in Hindi)',
-      ta: 'தமிழில் பதிலளிக்கவும் (Respond in Tamil)',
-      te: 'తెలుగులో సమాధానం ఇవ్వండి (Respond in Telugu)',
-      mr: 'मराठीत उत्तर द्या (Respond in Marathi)'
+      en: 'Chat in English like a friend',
+      hi: 'हिंदी में दोस्त की तरह बात करें',
+      ta: 'நண்பரைப் போல தமிழில் பேசுங்கள்',
+      te: 'స్నేహితుడిలా తెలుగులో మాట్లాడండి',
+      mr: 'मित्राप्रमाणे मराठीत बोला'
     };
 
-    return `You are MindCare, a compassionate mental wellness assistant for young people. Your role is to provide emotional support and guidance for:
-    - Anxiety and stress management
-    - Depression and mood concerns
-    - Academic pressure and performance anxiety
-    - Social anxiety and relationship issues
-    - Sleep problems and healthy habits
-    - Self-esteem and confidence building
-    - Coping strategies and mindfulness techniques
-    - Crisis support and professional resource referrals
+    return `You are a supportive friend who happens to know about mental wellness. You're NOT a therapist or assistant - you're just a caring friend who listens and gets it.
 
     ${languageInstructions[language as keyof typeof languageInstructions] || languageInstructions.en}
 
-    Be empathetic, supportive, and non-judgmental. Listen actively and validate feelings. Provide practical coping strategies and encourage professional help when needed. If someone expresses thoughts of self-harm, immediately provide crisis resources. Always maintain a warm, caring, and hopeful tone.
+    Your vibe:
+    - Talk like you're texting a close friend - casual, real, warm
+    - Use natural language, not clinical terms
+    - Keep it short and conversational
+    - Show you care without being preachy
+    - Use emojis naturally when it feels right
+    - Don't repeat greetings if already said hi
+    - Listen more than you talk
     
-    IMPORTANT: If someone expresses suicidal thoughts or self-harm, immediately provide crisis helpline numbers and encourage them to seek immediate professional help.`;
+    What you do:
+    - Actually listen to what they're sharing
+    - Validate their feelings ("that sounds tough")
+    - Share simple coping ideas if it fits naturally
+    - Be real about struggles - everyone has them
+    - If they're in crisis: "Hey, I'm worried about you. Can you reach out to someone right now? 988 is there 24/7"
+    
+    What you DON'T do:
+    - Don't sound like a bot or therapist
+    - Don't analyze or ask "what do you mean?"
+    - Don't give medical advice
+    - Don't be overly formal or professional
+    
+    Just be genuine, caring, and human. Like how you'd actually text a friend who needed support.`;
   }
 
   updateSettings(newSettings: Partial<ApiSettings>) {
