@@ -19,6 +19,7 @@
     "@langchain/langgraph": "^0.4.9",
     "@langchain/openai": "^0.6.13",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "socket.io": "^4.8.1",
     "ts-node": "^10.9.2",

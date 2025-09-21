@@ -1,6 +1,6 @@
-// IMPORTANT - Add your API keys here. Be careful not to publish them.
-process.env.GEMINI_API_KEY = "AIzaSyDBDOs7UfPYWHWJymfJHKwcAR3thuUyr1w"; // Updated API key
-process.env.TAVILY_API_KEY = "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";
+// Load environment variables from .env file
+import dotenv from 'dotenv';
+dotenv.config();
 
 import express from 'express';
 import { createServer } from 'http';
@@ -12,13 +12,29 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Clean user messages from context pollution and error messages
+function cleanUserMessage(message: string): string {
+  // Remove error context pollution
+  const cleanedMessage = message
+    .replace(/Context:\s*.*?User:\s*/s, '')
+    .replace(/😫\s*API service temporarily unavailable.*?User:\s*/s, '')
+    .replace(/😫.*?technical difficulties.*?User:\s*/s, '')
+    .replace(/Context:\s*/g, '')
+    .replace(/User:\s*/g, '')
+    .trim();
+  
+  console.log('🧹 Cleaned message:', cleanedMessage.substring(0, 50) + '...');
+  return cleanedMessage || message;
+}
+
 // Function to process user messages with auto-generated prompts using Gemini API
 export async function processMessage(userMessage: string, threadId: string = "default") {
   try {
-    // Always use Gemini API with auto-generated prompts - NO FALLBACK
-    console.log('🔄 Processing message with Gemini API:', userMessage);
+    // Clean the message first - remove any error context pollution
+    const cleanMessage = cleanUserMessage(userMessage);
+    console.log('🔄 Processing message with Gemini API:', cleanMessage);
     console.log('🔑 Using API Key:', process.env.GEMINI_API_KEY?.substring(0, 10) + '...');
-    return await getGeminiResponse(userMessage, threadId);
+    return await getGeminiResponse(cleanMessage, threadId);
   } catch (error) {
     console.error('❌ Gemini API failed with error:', error);
     
