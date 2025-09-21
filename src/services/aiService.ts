@@ -96,10 +96,20 @@ class LangGraphAgent {
         resolve(response);
       });
 
-      // Send message with context
-      const contextualMessage = context.length > 0 
-        ? `Context: ${context.slice(-3).join(' ')}\n\nUser: ${message}` 
+      // Send clean message without context pollution
+      // Only add meaningful context, not error messages
+      const cleanContext = context.filter(ctx => 
+        !ctx.includes('🚫') && 
+        !ctx.includes('technical difficulties') && 
+        !ctx.includes('API service') &&
+        ctx.trim().length > 0
+      );
+      
+      const contextualMessage = cleanContext.length > 0 
+        ? `${cleanContext.slice(-2).join(' ')} ${message}`.trim()
         : message;
+
+      console.log('📡 Sending clean message:', contextualMessage.substring(0, 100) + '...');
 
       this.socket.emit('user-message', {
         message: contextualMessage,
@@ -197,7 +207,7 @@ export class AIService {
       apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent', // Gemini endpoint
       model: 'gemini-1.5-flash-latest',
       maxTokens: 1000,
-      temperature: 0.9 // High creativity for natural responses
+      temperature: 0.8 // Set to 0.8 for natural responses as specified
     };
   }
 
