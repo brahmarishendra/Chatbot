@@ -13,15 +13,19 @@ class LangGraphAgent {
 
   private initializeConnection() {
     try {
-      this.socket = io('http://localhost:3003', {
+      // Use environment variable for backend URL, fallback to localhost for development
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
+      
+      this.socket = io(backendUrl, {
         autoConnect: true,
         reconnection: true,
         reconnectionAttempts: 5,
-        reconnectionDelay: 1000
+        reconnectionDelay: 1000,
+        transports: ['websocket', 'polling'] // Ensure compatibility with Render
       });
 
       this.socket.on('connect', () => {
-        console.log('Connected to LangGraph agent server');
+        console.log(`Connected to LangGraph agent server at ${backendUrl}`);
         this.connected = true;
       });
 
