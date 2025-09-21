@@ -16,7 +16,7 @@ const GetStarted: React.FC<GetStartedProps> = ({ onGetStarted }) => {
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center">
               <img 
-                src="https://i.pinimg.com/736x/35/ed/de/35edde0e0c9e69638f9e70024db73530.jpg" 
+                src="https://i.pinimg.com/originals/a9/4a/ee/a94aee835e16cff4f14c83dac8ffbe10.gif" 
                 alt="MindBuddy" 
                 className="w-full h-full object-cover"
               />
