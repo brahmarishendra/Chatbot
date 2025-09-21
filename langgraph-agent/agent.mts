@@ -1,5 +1,7 @@
-// Environment variables should be set in Render dashboard
-// Do not hardcode API keys in production
+// IMPORTANT - Add your API keys here. Be careful not to publish them.
+process.env.OPENAI_API_KEY = "sk-abcdef1234567890abcdef1234567890abcdef12";
+process.env.GEMINI_API_KEY = "AIzaSyDEPWWTnNkcpoyUZt83TKhiALrEusOPKWE";
+process.env.TAVILY_API_KEY = "tvly-...";
 
 import express from 'express';
 import { createServer } from 'http';
@@ -286,6 +288,7 @@ function validateEnvironment() {
 
 // Start server with proper error handling
 const PORT = process.env.PORT || 3003;
+const HOST = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for Render
 
 try {
   validateEnvironment();
