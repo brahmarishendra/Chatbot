@@ -16,7 +16,7 @@ const GetStarted: React.FC<GetStartedProps> = ({ onGetStarted }) => {
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center">
               <img 
-                src="https://i.pinimg.com/originals/a9/4a/ee/a94aee835e16cff4f14c83dac8ffbe10.gif" 
+                src="https://i.pinimg.com/736x/35/ed/de/35edde0e0c9e69638f9e70024db73530.jpg" 
                 alt="MindBuddy" 
                 className="w-full h-full object-cover"
               />
@@ -127,7 +127,7 @@ const GetStarted: React.FC<GetStartedProps> = ({ onGetStarted }) => {
               <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-pink-500 border-1 border-gray-300 flex items-center justify-center mb-6"
                    style={{ borderRadius: '1px' }}>
                  <img 
-                    src="https://i.pinimg.com/736x/35/ed/de/35edde0e0c9e69638f9e70024db73530.jpg" 
+                    src="https://i.pinimg.com/originals/1a/a4/60/1aa4608ae3ec6562dc394ab747b26124.gif" 
                     alt="Voice Chat" 
                     className="w-full h-full object-cover"
                   />
