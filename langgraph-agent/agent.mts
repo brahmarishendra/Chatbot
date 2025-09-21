@@ -1,7 +1,5 @@
-// IMPORTANT - Add your API keys here. Be careful not to publish them.
-process.env.OPENAI_API_KEY = "sk-abcdef1234567890abcdef1234567890abcdef12";
-process.env.GEMINI_API_KEY = "AIzaSyDEPWWTnNkcpoyUZt83TKhiALrEusOPKWE";
-process.env.TAVILY_API_KEY = "tvly-...";
+// Environment variables should be set in Render dashboard
+// Do not hardcode API keys in production
 
 import express from 'express';
 import { createServer } from 'http';
@@ -195,19 +193,47 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint
+// Health check endpoint - Render uses this to verify app health
 app.get('/', (req, res) => {
-  res.json({ 
-    status: 'MindBuddy Agent Server is running!', 
+  res.status(200).json({ 
+    status: 'OK',
+    service: 'MindBuddy Agent Server',
     message: 'Youth Mental Wellness Support API',
     powered_by: 'Google Gemini API',
-    port: process.env.PORT || 3003
+    port: process.env.PORT || 3003,
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
   });
 });
 
-// API endpoint for testing
+// Additional health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    env: process.env.NODE_ENV || 'development'
+  });
+});
+
+// API status endpoint
+app.get('/api/status', (req, res) => {
+  res.status(200).json({
+    api: 'running',
+    gemini_configured: !!process.env.GEMINI_API_KEY,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Simple ping endpoint for health checks
+app.get('/ping', (req, res) => {
+  res.status(200).send('pong');
+});
+
+// Render health check endpoint
+app.get('/render-health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: Date.now() });
 });
 
 // Socket.IO connection handling
@@ -258,19 +284,32 @@ function validateEnvironment() {
   }
 }
 
-// Start server
+// Start server with proper error handling
 const PORT = process.env.PORT || 3003;
 
 try {
   validateEnvironment();
   
-  server.listen(PORT, () => {
+  const serverInstance = server.listen(PORT, () => {
+    console.log(`✅ Server successfully started`);
     console.log(`🤖 MindBuddy Mental Wellness Chatbot running on port ${PORT}`);
+    console.log(`🌐 Health check available at: http://localhost:${PORT}/health`);
     console.log('💙 Ready to provide youth mental health support!');
     console.log('✨ Now powered by Google Gemini API for dynamic responses!');
     console.log(`🔑 Gemini API Key configured: ${process.env.GEMINI_API_KEY ? 'Yes' : 'No'}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`⚡ Server ready to accept connections on port ${PORT}`);
   });
+  
+  // Handle server errors
+  serverInstance.on('error', (error: any) => {
+    console.error('❌ Server error:', error);
+    if (error.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is already in use`);
+    }
+    process.exit(1);
+  });
+  
 } catch (error) {
   console.error('❌ Failed to start server:', error);
   process.exit(1);
