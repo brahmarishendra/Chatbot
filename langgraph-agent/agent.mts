@@ -1,4 +1,8 @@
 // IMPORTANT - Add your API keys here. Be careful not to publish them.
+process.env.OPENAI_API_KEY = "sk-abcdef1234567890abcdef1234567890abcdef12";
+process.env.GEMINI_API_KEY = "AIzaSyDEPWWTnNkcpoyUZt83TKhiALrEusOPKWE";
+process.env.TAVILY_API_KEY = "tvly-...";
+
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -301,7 +305,7 @@ try {
   });
   
   // Handle server errors
-  serverInstance.on('error', (error: any) => {
+  serverInstance.on('error', (error) => {
     console.error('❌ Server error:', error);
     if (error.code === 'EADDRINUSE') {
       console.error(`❌ Port ${PORT} is already in use`);
