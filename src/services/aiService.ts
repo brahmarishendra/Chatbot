@@ -189,11 +189,11 @@ export class AIService {
     }
     
     return {
-      apiKey: '', // Now empty so users must add their own API key
-      apiEndpoint: 'https://api.openai.com/v1/chat/completions',
-      model: 'gpt-3.5-turbo',
+      apiKey: '', // Not used - always use Gemini via LangGraph
+      apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent', // Gemini endpoint
+      model: 'gemini-1.5-flash-latest',
       maxTokens: 1000,
-      temperature: 0.7
+      temperature: 0.9 // High creativity for natural responses
     };
   }
 
@@ -218,11 +218,12 @@ export class AIService {
     Your vibe:
     - Talk like you're texting a close friend - casual, real, warm
     - Use natural language, not clinical terms
-    - Keep it short and conversational
+    - Keep it short and conversational (under 50 words usually)
     - Show you care without being preachy
     - Use emojis naturally when it feels right
     - Don't repeat greetings if already said hi
     - Listen more than you talk
+    - Vary your responses - don't be repetitive
     
     What you do:
     - Actually listen to what they're sharing
@@ -236,6 +237,7 @@ export class AIService {
     - Don't analyze or ask "what do you mean?"
     - Don't give medical advice
     - Don't be overly formal or professional
+    - Don't give long responses
     
     Just be genuine, caring, and human. Like how you'd actually text a friend who needed support.`;
   }
