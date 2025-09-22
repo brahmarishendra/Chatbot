@@ -1,5 +1,4 @@
 import { ApiSettings, ChatResponse } from '../types';
-import { ApiSettings, ChatResponse } from '../types';
 import { io, Socket } from 'socket.io-client';
 
 // LangGraph Agent Integration via WebSocket
@@ -108,11 +107,11 @@ class LangGraphAgent {
 
   private getFallbackResponse(message: string, language: string): ChatResponse {
     const responses = {
-      en: "I hear what you're saying. I'm having some connection issues, but I'm here to listen. If you're in crisis, please reach out to someone - call 988 or text HOME to 741741. What's going on?",
-      hi: "मैं आपकी बात सुन रहा हूं। अभी मुझे कुछ कनेक्शन की समस्या है, पर मैं सुनने के लिए यहां हूं। आप कैसा महसूस कर रहे हैं?",
-      ta: "நீங்கள் சொல்வதை நான் கேட்கிறேன். இப்போ எனக்கு சில இணைப்பு சிக்கல்கள் இருக்கிறது, ஆனால் நான் கேட்க இங்கே இருக்கிறேன். நீங்கள் எப்படி இருக்கிறீங்கள்?",
-      te: "మీరు చెప్పేది నేను వింటున్నాను. ఇప్పుడు నాకు కొన్ని కనెక్షన్ సమస్యలు ఉన్నాయి, కాని నేను వినడానికి ఇక్కడ ఉన్నాను. మీరు ఏమి అనుభవించుతున్నారు?",
-      mr: "तुम्ही काय सांगत आहात ते मी ऐकत आहे. आता मला काही कनेक्शनच्या समस्या आहेत, पण मी ऐकण्यासाठी इथे आहे. तुम्ही कसे अनुभवत आहात?"
+      en: "I hear what you're saying, but I'm having some connection issues right now. I'm still here to listen though! If you're in crisis, please reach out - call 988 or text HOME to 741741. What's on your mind? 💬",
+      hi: "मैं आपकी बात सुन रहा हूं, पर अभी मुझे कुछ कनेक्शन की समस्या है। फिर भी मैं सुनने के लिए यहां हूं! आप कैसा महसूस कर रहे हैं? 💬",
+      ta: "நீங்கள் சொல்வதை நான் கேட்கிறேன், ஆனால் இப்போ எனக்கு கொஞ்சம் இணைப்பு சிக்கல் இருக்கிறது। இன்னும் நான் கேட்க இங்கே இருக்கிறேன்! நீங்கள் எப்படி இருக்கிறீங்கள்? 💬",
+      te: "మీరు చెప్పేది నేను వింటున్నాను, కాని ఇప్పుడు నాకు కొన్ని కనెక్షన్ సమస్యలు ఉన్నాయి। అయినా నేను వినడానికి ఇక్కడే ఉన్నాను! మీరు ఏమి అనుభవించుతున్నారు? 💬",
+      mr: "तुम्ही काय सांगत आहात ते मी ऐकत आहे, पण आता मला काही कनेक्शनच्या समस्या आहेत. तरीही मी ऐकण्यासाठी इथे आहे! तुम्ही कसे अनुभवत आहात? 💬"
     };
 
     return {
@@ -245,7 +244,17 @@ export class AIService {
       });
 
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.statusText}`);
+        const errorText = await response.text();
+        let errorObj;
+        try {
+          errorObj = JSON.parse(errorText);
+        } catch {
+          throw new Error(`API request failed: ${response.statusText}`);
+        }
+        
+        // Generate human-friendly error message
+        const errorMessage = this.generateFriendlyErrorMessage(errorObj, response.status);
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -259,9 +268,73 @@ export class AIService {
       };
     } catch (error) {
       console.error('AI Service Error:', error);
-      // Fallback to LangGraph agent
+      
+      if (error instanceof Error && error.message.length > 10) {
+        // Return the specific error message we generated
+        return {
+          content: error.message,
+          confidence: 0.3,
+          needsHumanFallback: false,
+          detectedLanguage: language
+        };
+      }
+      
+      // Fallback to LangGraph agent for unknown errors
       return await this.langGraphAgent.processMessage(message, language, context);
     }
+  }
+
+  // Generate human-friendly error messages based on API response
+  private generateFriendlyErrorMessage(errorResponse: any, statusCode: number): string {
+    const errorType = errorResponse.error?.type;
+    const errorCode = errorResponse.error?.code;
+    const errorMessage = errorResponse.error?.message || '';
+    
+    // Billing and payment issues
+    if (errorType === 'insufficient_quota' || errorMessage.includes('quota')) {
+      return 'Hey there! Looks like your OpenAI account has run out of credits. You can add more at https://platform.openai.com/account/billing 💳';
+    }
+    
+    if (errorMessage.includes('billing') || errorMessage.includes('payment') || errorMessage.includes('upgrade')) {
+      return 'Your OpenAI account needs a payment method set up before you can chat. Head to https://platform.openai.com/account/billing to get started 💳';
+    }
+    
+    // Authentication issues
+    if (errorCode === 'invalid_api_key' || statusCode === 401) {
+      return "The API key doesn't seem to be working. Double-check it's correct in your settings 🔑";
+    }
+    
+    if (statusCode === 403) {
+      return 'Hmm, access was denied. This might be a regional restriction or billing issue. Check your OpenAI account status 🌍';
+    }
+    
+    // Rate limiting
+    if (statusCode === 429 || errorMessage.includes('rate')) {
+      return "Whoa, slow down there! Too many requests. Let's wait a moment and try again ⏰";
+    }
+    
+    // Regional restrictions
+    if (errorMessage.includes('region') || errorMessage.includes('country') || errorMessage.includes('location')) {
+      return "OpenAI's API isn't available in your region yet. You might need to use a VPN or try a different service 🌍";
+    }
+    
+    // Model issues
+    if (errorMessage.includes('model') && !errorMessage.includes('content')) {
+      return 'The AI model seems unavailable right now. This usually fixes itself in a few minutes 🤖';
+    }
+    
+    // Content filtering
+    if (errorMessage.includes('content') || errorMessage.includes('safety') || errorMessage.includes('policy')) {
+      return 'The AI safety system blocked that message. Try rephrasing what you want to say 🛡️';
+    }
+    
+    // Network/timeout issues
+    if (errorMessage.includes('timeout') || errorMessage.includes('network') || statusCode >= 500) {
+      return "Connection's a bit slow right now. Mind trying again? 🌐";
+    }
+    
+    // Generic fallback
+    return "Something's not quite right with the AI service. Give it another shot in a moment 🔄";
   }
 
   private buildSystemPrompt(language: string): string {

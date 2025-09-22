@@ -1,7 +1,7 @@
 {
   "name": "langgraph-agent",
   "version": "1.0.0",
-  "description": "",
+  "description": "MindBuddy Mental Health Chatbot powered by OpenAI ChatGPT API",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,7 +9,7 @@
     "start": "node --loader ts-node/esm agent.mts",
     "dev": "node --loader ts-node/esm agent.mts"
   },
-  "keywords": [],
+  "keywords": ["chatbot", "mental-health", "openai", "chatgpt", "langgraph"],
   "author": "",
   "license": "ISC",
   "type": "module",

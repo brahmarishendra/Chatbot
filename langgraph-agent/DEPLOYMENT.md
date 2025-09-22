@@ -2,20 +2,20 @@
 
 ## ⚠️ Resolving "Using fallback mode" Issue
 
-The "Using fallback mode" warning appears when the Gemini API key is not properly configured. Here's how to fix it:
+The "Using fallback mode" warning appears when the OpenAI API key is not properly configured. Here's how to fix it:
 
 ### For Local Development:
 
 1. **Set up your API key in `.env` file:**
    ```bash
    # Edit the .env file in the langgraph-agent directory
-   GEMINI_API_KEY=your_actual_gemini_api_key_here
+   OPENAI_API_KEY=your_actual_openai_api_key_here
    ```
 
-2. **Get your Gemini API key:**
-   - Visit: https://makersuite.google.com/app/apikey
+2. **Get your OpenAI API key:**
+   - Visit: https://platform.openai.com/api-keys
    - Create a new API key
-   - Copy the key and replace `your_gemini_api_key_here` in `.env`
+   - Copy the key and replace `your_openai_api_key_here` in `.env`
 
 ### For Render Deployment:
 
@@ -24,11 +24,13 @@ The "Using fallback mode" warning appears when the Gemini API key is not properl
    - Navigate to "Environment" section
    - Add the following environment variables:
      ```
-     GEMINI_API_KEY=your_actual_gemini_api_key_here
+     OPENAI_API_KEY=your_actual_openai_api_key_here
+     OPENAI_MODEL=gpt-3.5-turbo
+     OPENAI_TEMPERATURE=0.8
+     OPENAI_MAX_TOKENS=1000
      NODE_ENV=production
      PORT=3003
      HOST=0.0.0.0
-     GEMINI_TEMPERATURE=0.8
      ```
 
 2. **Verify Deployment:**
@@ -41,6 +43,7 @@ The "Using fallback mode" warning appears when the Gemini API key is not properl
 - **Basic Health**: `GET /`
 - **Detailed Health**: `GET /health`
 - **API Status**: `GET /api/status`
+- **API Key Test**: `GET /api/test-key`
 
 ### Expected Responses:
 
@@ -50,7 +53,8 @@ The "Using fallback mode" warning appears when the Gemini API key is not properl
   "status": "healthy",
   "fallback_mode": false,
   "api_configured": true,
-  "deployment_ready": true
+  "deployment_ready": true,
+  "powered_by": "OpenAI ChatGPT API"
 }
 ```
 
